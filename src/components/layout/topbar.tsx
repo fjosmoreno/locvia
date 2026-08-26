@@ -82,7 +82,7 @@ export function Topbar() {
                 <DropdownMenuItem onClick={() => openDrawer("favorites")} className="rounded-lg cursor-pointer">
                   <Heart className="w-4 h-4 mr-2" /> Meus favoritos
                 </DropdownMenuItem>
-                {(user.role === "AGENCY" || user.role === "OWNER" || user.role === "BROKER") && (
+                {(user.role === "AGENCY" || user.role === "OWNER" || user.role === "BROKER" || user.role === "ADMIN") && (
                   <DropdownMenuItem onClick={() => openDrawer("agency")} className="rounded-lg cursor-pointer">
                     <LayoutDashboard className="w-4 h-4 mr-2" /> Painel do anunciante
                   </DropdownMenuItem>

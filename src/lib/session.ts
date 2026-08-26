@@ -49,4 +49,5 @@ export async function assertActiveUser(userId: string) {
 }
 
 export const ADMIN_ROLES = [ROLES.ADMIN];
-export const ADVERTISER_ROLES = [ROLES.AGENCY, ROLES.OWNER, ROLES.BROKER];
+// ADMIN também pode cadastrar imóveis (acesso total à plataforma)
+export const ADVERTISER_ROLES = [ROLES.AGENCY, ROLES.OWNER, ROLES.BROKER, ROLES.ADMIN];

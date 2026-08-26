@@ -80,22 +80,27 @@ export async function POST(req: NextRequest) {
 
   const { agency, owner, broker } = await getAdvertiser(user.id);
 
-  // Regra: imobiliária deve estar aprovada
-  if (user.role === "AGENCY" && agency?.status !== "APPROVED") {
+  // ADMIN bypassa verificações de aprovação e limite de plano (acesso total)
+  const isAdmin = user.role === "ADMIN";
+
+  // Regra: imobiliária deve estar aprovada (admin isento)
+  if (!isAdmin && user.role === "AGENCY" && agency?.status !== "APPROVED") {
     return NextResponse.json({ error: "Sua imobiliária precisa ser aprovada para publicar." }, { status: 403 });
   }
-  // Regra: proprietário precisa estar verificado
-  if (user.role === "OWNER" && owner?.verificationStatus !== "VERIFIED") {
+  // Regra: proprietário precisa estar verificado (admin isento)
+  if (!isAdmin && user.role === "OWNER" && owner?.verificationStatus !== "VERIFIED") {
     return NextResponse.json({ error: "Validação de proprietário pendente." }, { status: 403 });
   }
 
-  // Regra: limite do plano
-  const canPub = await canPublish({
-    agencyId: agency?.id,
-    ownerId: owner?.id,
-  });
-  if (!canPub.allowed) {
-    return NextResponse.json({ error: canPub.reason }, { status: 403 });
+  // Regra: limite do plano (admin isento — sem limite)
+  if (!isAdmin) {
+    const canPub = await canPublish({
+      agencyId: agency?.id,
+      ownerId: owner?.id,
+    });
+    if (!canPub.allowed) {
+      return NextResponse.json({ error: canPub.reason }, { status: 403 });
+    }
   }
 
   // Geocode se endereço fornecido mas sem coords
