@@ -10,6 +10,7 @@ import {
   useMap,
   useMapEvents,
   Circle,
+  Polyline,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { useUI } from "@/lib/store";
@@ -248,6 +249,65 @@ export default function MapView() {
           zIndexOffset={1500}
         />
       )}
+
+      {/* Rota LOCVIA ROUTE — polyline + marcadores origem/destino */}
+      <RouteLayer />
     </MapContainer>
+  );
+}
+
+/** Camada da rota: polyline ciano + marcadores A (origem) e B (destino). */
+function RouteLayer() {
+  const { route } = useUI();
+  if (!route.route || route.route.length < 2) return null;
+
+  const positions = route.route.map((p) => [p.lat, p.lng]) as [number, number][];
+  return (
+    <>
+      <Polyline
+        positions={positions}
+        pathOptions={{
+          color: "#00D4FF",
+          weight: 5,
+          opacity: 0.85,
+          lineCap: "round",
+          lineJoin: "round",
+        }}
+      />
+      {/* halo da rota */}
+      <Polyline
+        positions={positions}
+        pathOptions={{
+          color: "#00D4FF",
+          weight: 12,
+          opacity: 0.15,
+          lineCap: "round",
+        }}
+      />
+      {route.origin && (
+        <Marker
+          position={[route.origin.lat, route.origin.lng]}
+          icon={L.divIcon({
+            html: `<div style="width:14px;height:14px;border-radius:999px;background:#00D4FF;border:3px solid #fff;box-shadow:0 0 0 4px rgba(0,212,255,.25),0 2px 6px rgba(0,0,0,.4)"></div>`,
+            className: "",
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+          })}
+          zIndexOffset={1800}
+        />
+      )}
+      {route.destination && (
+        <Marker
+          position={[route.destination.lat, route.destination.lng]}
+          icon={L.divIcon({
+            html: `<div style="width:14px;height:14px;border-radius:3px;background:#ef4444;border:3px solid #fff;box-shadow:0 0 0 4px rgba(239,68,68,.25),0 2px 6px rgba(0,0,0,.4)"></div>`,
+            className: "",
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+          })}
+          zIndexOffset={1800}
+        />
+      )}
+    </>
   );
 }

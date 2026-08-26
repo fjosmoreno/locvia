@@ -16,6 +16,8 @@ import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { LocationPermissionPrompt } from "@/components/map/location-permission-prompt";
 import { MobilePanel } from "@/components/layout/mobile-panel";
 import { FilterChips } from "@/components/filters/filter-chips";
+import { AiPanel } from "@/components/ai/ai-panel";
+import { RoutePanel } from "@/components/route/route-panel";
 import { cn } from "@/lib/utils";
 
 export function AppShell() {
@@ -54,6 +56,8 @@ export function AppShell() {
         <Topbar />
         <FilterChips />
         <LocationPermissionPrompt />
+        <AiPanel />
+        <RoutePanel />
       </div>
 
       {/* Painel lateral — desktop */}

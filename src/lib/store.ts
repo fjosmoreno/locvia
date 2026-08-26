@@ -20,6 +20,41 @@ export interface MapView {
   zoom: number;
 }
 
+// ---- Pergunte ao LOCVIA (IA conversacional) ----
+export interface AiMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+  // snapshot dos imóveis retornados nesta resposta (para o mapa destacar)
+  propertyIds?: string[];
+}
+export interface AiContext {
+  open: boolean;
+  loading: boolean;
+  messages: AiMessage[];
+  // filtros temporários aplicados pela IA (substituem os do mapa enquanto ativos)
+  activeFilters: any | null;
+  // imóveis destacados pela última resposta da IA
+  highlightedIds: string[] | null;
+  // origem do destaque: "ai" | "route" | null
+  highlightSource: "ai" | "route" | null;
+  // erro da última chamada
+  error: string | null;
+}
+
+// ---- LOCVIA ROUTE (imóveis no caminho) ----
+export interface RouteContext {
+  open: boolean;
+  loading: boolean;
+  origin: { lat: number; lng: number } | null;
+  destination: { lat: number; lng: number; label?: string } | null;
+  route: { lat: number; lng: number }[] | null; // geometria
+  distance: number | null; // metros
+  duration: number | null; // segundos
+  properties: Property[]; // imóveis no caminho
+  error: string | null;
+}
+
 interface UIState {
   // painel direito / bottom sheet
   panelView: PanelView;
@@ -53,6 +88,11 @@ interface UIState {
   properties: Property[];
   propertiesError: string | null;
 
+  // Pergunte ao LOCVIA (IA) — contexto temporário, NÃO altera filtros permanentes
+  ai: AiContext;
+  // LOCVIA ROUTE — imóveis no caminho
+  route: RouteContext;
+
   // actions
   setPanelView: (v: PanelView) => void;
   openProperty: (p: Property) => void;
@@ -75,6 +115,28 @@ interface UIState {
   setReturnView: (v: MapView | null) => void;
   setSearchInAreaPrompt: (v: boolean) => void;
   setProperties: (p: Property[]) => void;
+  // IA actions
+  openAi: () => void;
+  closeAi: () => void;
+  setAiLoading: (v: boolean) => void;
+  addAiMessage: (m: AiMessage) => void;
+  setAiResult: (r: {
+    reply: string;
+    filters: any;
+    propertyIds: string[];
+  }) => void;
+  setAiError: (e: string | null) => void;
+  clearAi: () => void; // limpa destaque da IA (volta ao mapa normal)
+  // ROUTE actions
+  openRoute: () => void;
+  closeRoute: () => void;
+  setRouteOrigin: (o: { lat: number; lng: number } | null) => void;
+  setRouteDestination: (d: { lat: number; lng: number; label?: string } | null) => void;
+  setRouteGeometry: (g: { route: { lat: number; lng: number }[]; distance: number; duration: number } | null) => void;
+  setRouteProperties: (p: Property[]) => void;
+  setRouteLoading: (v: boolean) => void;
+  setRouteError: (e: string | null) => void;
+  clearRoute: () => void;
   setLoadingProperties: (v: boolean) => void;
   setPropertiesError: (e: string | null) => void;
   flyTo: (lat: number, lng: number, zoom?: number) => void;
@@ -178,6 +240,29 @@ export const useUI = create<UIState>((set, get) => ({
   propertiesError: null,
   flyToTarget: null,
 
+  // Pergunte ao LOCVIA — estado inicial
+  ai: {
+    open: false,
+    loading: false,
+    messages: [],
+    activeFilters: null,
+    highlightedIds: null,
+    highlightSource: null,
+    error: null,
+  },
+  // LOCVIA ROUTE — estado inicial
+  route: {
+    open: false,
+    loading: false,
+    origin: null,
+    destination: null,
+    route: null,
+    distance: null,
+    duration: null,
+    properties: [],
+    error: null,
+  },
+
   setPanelView: (v) => set({ panelView: v }),
 
   openProperty: (p) =>
@@ -258,6 +343,99 @@ export const useUI = create<UIState>((set, get) => ({
   setProperties: (p) => set({ properties: p }),
   setLoadingProperties: (v) => set({ loadingProperties: v }),
   setPropertiesError: (e) => set({ propertiesError: e }),
+
+  // ---- Pergunte ao LOCVIA (IA) ----
+  openAi: () => set((s) => ({ ai: { ...s.ai, open: true } })),
+  closeAi: () => set((s) => ({ ai: { ...s.ai, open: false } })),
+  setAiLoading: (v) => set((s) => ({ ai: { ...s.ai, loading: v } })),
+  addAiMessage: (m) => set((s) => ({ ai: { ...s.ai, messages: [...s.ai.messages, m] } })),
+  setAiResult: (r) =>
+    set((s) => ({
+      ai: {
+        ...s.ai,
+        loading: false,
+        error: null,
+        activeFilters: r.filters,
+        highlightedIds: r.propertyIds.length ? r.propertyIds : null,
+        highlightSource: r.propertyIds.length ? "ai" : s.ai.highlightSource,
+        messages: [
+          ...s.ai.messages,
+          {
+            role: "assistant" as const,
+            content: r.reply,
+            timestamp: Date.now(),
+            propertyIds: r.propertyIds,
+          },
+        ],
+      },
+    })),
+  setAiError: (e) =>
+    set((s) => ({
+      ai: {
+        ...s.ai,
+        loading: false,
+        error: e,
+        // se erro, não limpa o destaque anterior (mantém contexto)
+      },
+    })),
+  clearAi: () =>
+    set((s) => ({
+      ai: {
+        ...s.ai,
+        activeFilters: null,
+        highlightedIds: null,
+        highlightSource: s.route.properties.length ? "route" : null,
+        // mantém o histórico de mensagens — usuário pode continuar conversando
+      },
+    })),
+
+  // ---- LOCVIA ROUTE ----
+  openRoute: () => set((s) => ({ route: { ...s.route, open: true } })),
+  closeRoute: () => set((s) => ({ route: { ...s.route, open: false } })),
+  setRouteOrigin: (o) => set((s) => ({ route: { ...s.route, origin: o } })),
+  setRouteDestination: (d) => set((s) => ({ route: { ...s.route, destination: d } })),
+  setRouteGeometry: (g) =>
+    set((s) => ({
+      route: g
+        ? {
+            ...s.route,
+            route: g.route,
+            distance: g.distance,
+            duration: g.duration,
+          }
+        : { ...s.route, route: null, distance: null, duration: null },
+    })),
+  setRouteProperties: (p) =>
+    set((s) => ({
+      route: { ...s.route, properties: p },
+      // destaca imóveis da rota no mapa
+      ai: {
+        ...s.ai,
+        highlightedIds: p.length ? p.map((x) => x.id) : null,
+        highlightSource: p.length ? "route" : s.ai.highlightSource,
+      },
+    })),
+  setRouteLoading: (v) => set((s) => ({ route: { ...s.route, loading: v } })),
+  setRouteError: (e) => set((s) => ({ route: { ...s.route, error: e } })),
+  clearRoute: () =>
+    set((s) => ({
+      route: {
+        open: false,
+        loading: false,
+        origin: null,
+        destination: null,
+        route: null,
+        distance: null,
+        duration: null,
+        properties: [],
+        error: null,
+      },
+      ai: {
+        ...s.ai,
+        highlightedIds: s.ai.highlightSource === "route" ? null : s.ai.highlightIds,
+        highlightSource: s.ai.highlightSource === "route" ? null : s.ai.highlightSource,
+      },
+    })),
 
   flyTo: (lat, lng, zoom) =>
     set((s) => ({ flyToTarget: { lat, lng, zoom, nonce: Date.now() } })),

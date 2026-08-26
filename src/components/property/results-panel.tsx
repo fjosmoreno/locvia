@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPinOff, SearchX, Loader2, RefreshCw, SlidersHorizontal, X } from "lucide-react";
+import { MapPinOff, SearchX, Loader2, RefreshCw, SlidersHorizontal, X, Sparkles, Route as RouteIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PropertyCard, PropertyCardSkeleton } from "@/components/property/property-card";
 import { useUI } from "@/lib/store";
@@ -20,6 +20,10 @@ export function ResultsPanel() {
     userLocation,
     flyTo,
     mapCenter,
+    ai,
+    route,
+    clearAi,
+    clearRoute,
   } = useUI();
 
   const showDetail = panelView === "detail" && (selectedProperty || false);
@@ -30,6 +34,8 @@ export function ResultsPanel() {
   }
 
   const count = properties.length;
+  const aiActive = ai.highlightSource === "ai" && ai.highlightedIds;
+  const routeActive = route.properties.length > 0;
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -39,13 +45,49 @@ export function ResultsPanel() {
         <div className="flex items-center justify-between gap-2 mt-0.5">
           <div className="text-sm font-semibold text-foreground">
             {loadingProperties && count === 0 ? "Buscando imóveis…" : `${count} ${count === 1 ? "imóvel" : "imóveis"}`}
-            {filters.purpose && (
+            {filters.purpose && !aiActive && (
               <span className="text-muted-foreground font-normal ml-1.5">
                 · {filters.purpose === "RENT" ? "Aluguel" : "Venda"}
               </span>
             )}
           </div>
         </div>
+
+        {/* Banner: modo IA ativo */}
+        {aiActive && (
+          <div className="mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-xs text-primary font-medium truncate">
+                {ai.highlightedIds!.length} imóveis pela busca do LOCVIA
+              </span>
+            </div>
+            <button
+              onClick={clearAi}
+              className="text-[11px] text-primary hover:text-primary/80 font-medium shrink-0 flex items-center gap-1"
+            >
+              <X className="w-3 h-3" /> Limpar
+            </button>
+          </div>
+        )}
+
+        {/* Banner: modo rota ativo */}
+        {routeActive && (
+          <div className="mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20">
+            <div className="flex items-center gap-2 min-w-0">
+              <RouteIcon className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-xs text-primary font-medium truncate">
+                {route.properties.length} imóveis no seu caminho
+              </span>
+            </div>
+            <button
+              onClick={clearRoute}
+              className="text-[11px] text-primary hover:text-primary/80 font-medium shrink-0 flex items-center gap-1"
+            >
+              <X className="w-3 h-3" /> Limpar
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Lista */}
