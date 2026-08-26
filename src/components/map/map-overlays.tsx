@@ -1,15 +1,48 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
-import { Plus, Minus, LocateFixed, Loader2, RefreshCw } from "lucide-react";
+import { Plus, Minus, LocateFixed, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { useUI } from "@/lib/store";
-import { useGeolocation } from "@/hooks/use-geolocation";
+import { useUserLocation } from "@/hooks/use-geolocation";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-/** Controles de zoom + localizar — overlay premium. */
+/** Controles de zoom + localizar — overlay premium com estados. */
 export function MapControls() {
   const map = useMap();
-  const { locate, locating, userLocation } = useGeolocation();
+  const { status, request, message, location } = useUserLocation();
+  const lastErrorStatus = useRef<string | null>(null);
+
+  // Feedback de erro via toast quando status muda para falha (uma vez por mudança)
+  useEffect(() => {
+    const failed = ["denied", "timeout", "error", "unavailable"];
+    if (failed.includes(status) && lastErrorStatus.current !== status) {
+      lastErrorStatus.current = status;
+      toast.error(message, {
+        id: `geo-${status}`,
+        duration: 5000,
+        action:
+          status !== "unavailable"
+            ? { label: "Tentar novamente", onClick: () => request() }
+            : undefined,
+      });
+    }
+    if (status === "success" || status === "requesting" || status === "idle") {
+      lastErrorStatus.current = null;
+    }
+  }, [status, message, request]);
+
+  function handleLocate() {
+    if (status === "requesting") return;
+    // Se já localizado, apenas recentraliza
+    if (status === "success" && location) {
+      map.flyTo([location.lat, location.lng], 15, { duration: 0.8 });
+      return;
+    }
+    request();
+  }
 
   return (
     <div className="absolute right-3 bottom-8 z-[1000] flex flex-col gap-2 pointer-events-auto">
@@ -28,13 +61,27 @@ export function MapControls() {
         <Minus className="w-5 h-5" strokeWidth={2.4} />
       </button>
       <button
-        onClick={() => locate()}
-        className={`map-overlay-btn ${userLocation ? "is-active" : ""}`}
+        onClick={handleLocate}
+        className={cn(
+          "map-overlay-btn relative",
+          status === "success" && "is-active",
+          status === "denied" && "text-destructive hover:!bg-destructive/10"
+        )}
         aria-label="Minha localização"
-        title="Minha localização"
+        title={
+          status === "requesting"
+            ? "Localizando…"
+            : status === "success"
+            ? "Você está aqui — toque para recentralizar"
+            : status === "denied"
+            ? "Localização negada — toque para tentar novamente"
+            : "Minha localização"
+        }
       >
-        {locating ? (
+        {status === "requesting" ? (
           <Loader2 className="w-4.5 h-4.5 animate-spin" />
+        ) : status === "denied" ? (
+          <AlertCircle className="w-4.5 h-4.5" />
         ) : (
           <LocateFixed className="w-4.5 h-4.5" />
         )}

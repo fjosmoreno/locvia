@@ -60,7 +60,7 @@ export function AdminDashboard() {
                   ? "Carregando sessão…"
                   : isAdmin
                   ? `Conectado como ${session?.user?.name ?? "admin"}`
-                  : "MapImóvel"}
+                  : "LOCVIA"}
               </SheetDescription>
             </div>
           </div>

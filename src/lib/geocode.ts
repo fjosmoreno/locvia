@@ -15,7 +15,7 @@ const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
 const country = "BR";
 const headers = {
   "Accept-Language": "pt-BR",
-  "User-Agent": "MapImovel/1.0 (MVP)",
+  "User-Agent": "LOCVIA/1.0 (MVP)",
 };
 
 /** Busca endereço/bairro/cidade por texto. Retorna múltiplas sugestões. */

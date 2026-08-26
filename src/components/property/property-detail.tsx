@@ -123,7 +123,7 @@ export function PropertyDetail({ propertyId }: { propertyId: string }) {
   function trackLead(source: string) { lead.mutate({ propertyId: p!.id, source }); }
   function handleWhatsapp() {
     trackLead("WHATSAPP");
-    const msg = `Olá! Tenho interesse no imóvel "${p!.title}" (${formatPrice(p!.price, p!.purpose)}) visto no MapImóvel.`;
+    const msg = `Olá! Tenho interesse no imóvel "${p!.title}" (${formatPrice(p!.price, p!.purpose)}) visto no LOCVIA.`;
     window.open(whatsappLink(p!.whatsapp || p!.phone || "", msg), "_blank");
   }
   function handlePhone() {

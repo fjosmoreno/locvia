@@ -19,8 +19,8 @@ export function BrandLogo({ compact = false, className }: { compact?: boolean; c
       </div>
       {!compact && (
         <div className="leading-none">
-          <div className="font-semibold text-[15px] tracking-tight text-foreground">
-            Map<span className="text-primary">Imóvel</span>
+          <div className="font-bold text-[15px] tracking-tight text-foreground">
+            LOC<span className="text-primary">VIA</span>
           </div>
           <div className="text-[10px] text-muted-foreground font-medium tracking-wide -mt-0.5">
             imóveis no mapa

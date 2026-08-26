@@ -12,25 +12,25 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MapImóvel — Imóveis no mapa, ao seu redor",
+  title: "LOCVIA — Imóveis no mapa, ao seu redor",
   description:
-    "A plataforma imobiliária map-first. Abra o mapa e descubra casas, apartamentos, lojas e salas comerciais disponíveis ao seu redor, em tempo real.",
+    "O aplicativo de mapas especializado em imóveis. Abra o mapa e descubra casas, apartamentos, lojas e salas comerciais disponíveis ao seu redor, em tempo real.",
   keywords: [
     "imóveis", "mapa imobiliário", "alugar", "comprar", "apartamento", "casa",
-    "loja", "sala comercial", "Belo Horizonte", "imobiliária",
+    "loja", "sala comercial", "Belo Horizonte", "imobiliária", "LOCVIA",
   ],
-  authors: [{ name: "MapImóvel" }],
+  authors: [{ name: "LOCVIA" }],
   openGraph: {
-    title: "MapImóvel — Imóveis no mapa, ao seu redor",
+    title: "LOCVIA — Imóveis no mapa, ao seu redor",
     description:
       "O mapa é o produto. Descubra imóveis disponíveis ao seu redor, em tempo real.",
-    siteName: "MapImóvel",
+    siteName: "LOCVIA",
     type: "website",
     locale: "pt_BR",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MapImóvel",
+    title: "LOCVIA",
     description: "Encontre imóveis no mapa, ao seu redor.",
   },
 };

@@ -75,7 +75,7 @@ export function AuthModal() {
           await signIn("credentials", {
             email: form.email, password: form.password, redirect: false,
           });
-          toast.success("Conta criada! Bem-vindo ao MapImóvel.");
+          toast.success("Conta criada! Bem-vindo ao LOCVIA.");
           closeDrawer();
         }
       }
@@ -92,7 +92,7 @@ export function AuthModal() {
             <BrandLogo />
           </div>
           <DialogTitle className="text-center text-lg">
-            {mode === "login" ? "Entrar no MapImóvel" : "Criar conta"}
+            {mode === "login" ? "Entrar no LOCVIA" : "Criar conta"}
           </DialogTitle>
           <DialogDescription className="text-center">
             {mode === "login"

@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -14,6 +14,7 @@ import {
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { useUI } from "@/lib/store";
 import { useProperties } from "@/hooks/use-properties";
+import { useUserLocation } from "@/hooks/use-geolocation";
 import { formatPrice } from "@/lib/geo";
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from "@/lib/constants";
 import { MapControls, SearchInAreaPrompt } from "@/components/map/map-overlays";
@@ -59,7 +60,6 @@ function userIcon() {
 function MapController() {
   const map = useMap();
   const flyToTarget = useUI((s) => s.flyToTarget);
-  const setMapCenter = useUI((s) => s.setMapCenter);
 
   useEffect(() => {
     if (!flyToTarget) return;
@@ -69,41 +69,49 @@ function MapController() {
     });
   }, [flyToTarget, map]);
 
-  useEffect(() => {
-    const c = map.getCenter();
-    setMapCenter({ lat: c.lat, lng: c.lng });
-  }, [map, setMapCenter]);
-
   return null;
 }
 
 function MapEvents() {
   const setMapBbox = useUI((s) => s.setMapBbox);
   const setMapCenter = useUI((s) => s.setMapCenter);
+  const setExploreView = useUI((s) => s.setExploreView);
   const setSearchInAreaPrompt = useUI((s) => s.setSearchInAreaPrompt);
+  const panelView = useUI((s) => s.panelView);
 
   const map = useMapEvents({
     move: () => setSearchInAreaPrompt(true),
     moveend: () => {
       const b = map.getBounds();
+      const c = map.getCenter();
+      const z = map.getZoom();
       setMapBbox({
         minLat: b.getSouth(),
         maxLat: b.getNorth(),
         minLng: b.getWest(),
         maxLng: b.getEast(),
       });
-      const c = map.getCenter();
       setMapCenter({ lat: c.lat, lng: c.lng });
+      // Preserva a visão de EXPLORAÇÃO apenas quando não está visualizando um imóvel
+      // (durante detalhe, o mapa voou para o imóvel — não deve sobrescrever o returnView)
+      if (panelView !== "detail") {
+        setExploreView({ lat: c.lat, lng: c.lng, zoom: z });
+      }
       window.setTimeout(() => setSearchInAreaPrompt(false), 800);
     },
     zoomend: () => {
       const b = map.getBounds();
+      const c = map.getCenter();
+      const z = map.getZoom();
       setMapBbox({
         minLat: b.getSouth(),
         maxLat: b.getNorth(),
         minLng: b.getWest(),
         maxLng: b.getEast(),
       });
+      if (panelView !== "detail") {
+        setExploreView({ lat: c.lat, lng: c.lng, zoom: z });
+      }
     },
   });
   return null;
@@ -120,7 +128,11 @@ export default function MapView() {
     setProperties,
     setLoadingProperties,
     setPropertiesError,
+    exploreView,
   } = useUI();
+
+  const { request } = useUserLocation();
+  const didAutoRequest = useRef(false);
 
   const query = useProperties(true);
 
@@ -141,15 +153,30 @@ export default function MapView() {
     setPropertiesError,
   ]);
 
+  // Auto-request de localização na primeira entrada (uma única vez)
+  useEffect(() => {
+    if (didAutoRequest.current) return;
+    didAutoRequest.current = true;
+    // Pequeno delay para o mapa montar antes de solicitar (evita race no iOS)
+    const t = setTimeout(() => request(), 400);
+    return () => clearTimeout(t);
+  }, [request]);
+
   const selectedProperty = useMemo(
     () => properties.find((p) => p.id === selectedPropertyId) || null,
     [properties, selectedPropertyId]
   );
 
+  // Centro/zoom iniciais: restaura da memória (sessionStorage) ou padrão
+  const initialCenter: [number, number] = exploreView
+    ? [exploreView.lat, exploreView.lng]
+    : [DEFAULT_CENTER.lat, DEFAULT_CENTER.lng];
+  const initialZoom = exploreView?.zoom ?? DEFAULT_ZOOM;
+
   return (
     <MapContainer
-      center={[DEFAULT_CENTER.lat, DEFAULT_CENTER.lng]}
-      zoom={DEFAULT_ZOOM}
+      center={initialCenter}
+      zoom={initialZoom}
       zoomControl={false}
       className="h-full w-full"
       preferCanvas
