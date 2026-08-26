@@ -69,7 +69,7 @@ export function PropertyGallery({
             <button
               onClick={scrollPrev}
               disabled={selected === 0}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-full bg-white/90 backdrop-blur shadow disabled:opacity-0 transition-opacity hover:bg-white"
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-full bg-black/50 backdrop-blur text-white shadow disabled:opacity-0 transition-opacity hover:bg-black/70"
               aria-label="Anterior"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -77,7 +77,7 @@ export function PropertyGallery({
             <button
               onClick={scrollNext}
               disabled={selected === images.length - 1}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-full bg-white/90 backdrop-blur shadow disabled:opacity-0 transition-opacity hover:bg-white"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-full bg-black/50 backdrop-blur text-white shadow disabled:opacity-0 transition-opacity hover:bg-black/70"
               aria-label="Próxima"
             >
               <ChevronRight className="w-5 h-5" />
@@ -90,7 +90,7 @@ export function PropertyGallery({
 
         <button
           onClick={() => setFullscreen(true)}
-          className="absolute top-2 right-2 w-8 h-8 grid place-items-center rounded-full bg-white/90 backdrop-blur shadow hover:bg-white"
+          className="absolute top-2 right-2 w-8 h-8 grid place-items-center rounded-full bg-black/50 backdrop-blur text-white shadow hover:bg-black/70"
           aria-label="Tela cheia"
         >
           <Expand className="w-4 h-4" />

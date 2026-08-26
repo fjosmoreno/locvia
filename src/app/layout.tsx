@@ -20,6 +20,10 @@ export const metadata: Metadata = {
     "loja", "sala comercial", "Belo Horizonte", "imobiliária", "LOCVIA",
   ],
   authors: [{ name: "LOCVIA" }],
+  icons: {
+    icon: "/locvia-icon.png",
+    apple: "/locvia-icon.png",
+  },
   openGraph: {
     title: "LOCVIA — Imóveis no mapa, ao seu redor",
     description:
@@ -27,11 +31,13 @@ export const metadata: Metadata = {
     siteName: "LOCVIA",
     type: "website",
     locale: "pt_BR",
+    images: [{ url: "/locvia-logo.png", width: 1200, height: 630, alt: "LOCVIA" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "LOCVIA",
     description: "Encontre imóveis no mapa, ao seu redor.",
+    images: ["/locvia-logo.png"],
   },
 };
 
@@ -39,7 +45,7 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#0f3d2e",
+  themeColor: "#0b1120",
 };
 
 export default function RootLayout({

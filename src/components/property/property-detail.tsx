@@ -37,8 +37,8 @@ function MiniMap({ lat, lng }: { lat: number; lng: number }) {
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) tiles.push({ dx, dy });
   return (
-    <div className="relative w-full aspect-[16/8] rounded-2xl overflow-hidden border border-border bg-[#eef0ec]">
-      <div className="grid grid-cols-3 grid-rows-3 w-[300%] h-[300%] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+    <div className="relative w-full aspect-[16/8] rounded-2xl overflow-hidden border border-border bg-[#0b1120]">
+      <div className="grid grid-cols-3 grid-rows-3 w-[300%] h-[300%] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ filter: "invert(0.92) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.7)" }}>
         {tiles.map(({ dx, dy }) => {
           const sub = ["a", "b", "c", "d"][Math.abs((x + dx + y + dy) % 4)];
           const url = `https://${sub}.basemaps.cartocdn.com/light_all/${z}/${x + dx}/${y + dy}.png`;
@@ -295,7 +295,7 @@ export function PropertyDetail({ propertyId }: { propertyId: string }) {
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-semibold text-foreground truncate">{advertiser.name}</span>
                   {advertiser.verified && (
-                    <Badge variant="secondary" className="text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 shrink-0">
+                    <Badge variant="secondary" className="text-[10px] gap-0.5 bg-primary/15 text-primary shrink-0">
                       <BadgeCheck className="w-3 h-3" /> Verificado
                     </Badge>
                   )}

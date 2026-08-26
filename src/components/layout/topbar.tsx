@@ -51,14 +51,14 @@ export function Topbar() {
 
           {/* Perfil */}
           {status === "loading" ? (
-            <Button variant="secondary" size="icon" className="h-11 w-11 rounded-full shadow-md bg-white shrink-0">
+            <Button variant="secondary" size="icon" className="h-11 w-11 rounded-full shadow-md bg-card shrink-0">
               <Loader2 className="w-4 h-4 animate-spin" />
             </Button>
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="h-11 w-11 rounded-full shadow-md bg-white hover:bg-accent/80 shrink-0 grid place-items-center transition-colors border border-black/5"
+                  className="h-11 w-11 rounded-full shadow-md bg-card hover:bg-secondary shrink-0 grid place-items-center transition-colors border border-border"
                   aria-label="Menu do perfil"
                 >
                   <Avatar className="w-8 h-8">

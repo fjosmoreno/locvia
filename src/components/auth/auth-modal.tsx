@@ -192,7 +192,7 @@ export function AuthModal() {
                         <Input value={form.creci} onChange={(e) => setForm({ ...form, creci: e.target.value })} />
                       </Field>
                     </div>
-                    <p className="text-[11px] text-amber-600 bg-amber-50 rounded-md p-2">
+                    <p className="text-[11px] text-warning bg-warning/10 rounded-md p-2">
                       Sua imobiliária será analisada e aprovada pelo nosso time antes de publicar.
                     </p>
                   </div>

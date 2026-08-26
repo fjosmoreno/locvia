@@ -45,65 +45,72 @@
 }
 
 /* ============================================================
-   MAPIMÓVEL — DESIGN SYSTEM
-   Paleta neutra quente + emerald profundo.
-   Tipografia Inter com hierarquia refinada.
+   LOCVIA — DESIGN SYSTEM OFICIAL
+   Identidade visual: Dark mode premium + ciano elétrico.
+   Paleta extraída do logo/banner oficial.
    ============================================================ */
 
 :root {
   --radius: 0.75rem;
 
-  /* Neutros quentes (papel) */
-  --background: oklch(0.985 0.003 95);
-  --foreground: oklch(0.20 0.008 95);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.20 0.008 95);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.20 0.008 95);
+  /* ---- LOCVIA: Dark mode como padrão oficial ---- */
+  /* Fundo: azul-marinho profundo (#0B1120) */
+  --background: oklch(0.18 0.018 255);
+  --foreground: oklch(0.98 0.003 240);
+  /* Cards/superfícies: navy elevado (#131c31 / #1E293B) */
+  --card: oklch(0.22 0.020 255);
+  --card-foreground: oklch(0.98 0.003 240);
+  --popover: oklch(0.22 0.020 255);
+  --popover-foreground: oklch(0.98 0.003 240);
 
-  /* Accent: emerald/pine profundo e confiante */
-  --primary: oklch(0.46 0.098 163);
-  --primary-foreground: oklch(0.99 0.004 95);
-  --secondary: oklch(0.965 0.005 95);
-  --secondary-foreground: oklch(0.32 0.015 95);
-  --muted: oklch(0.972 0.003 95);
-  --muted-foreground: oklch(0.52 0.008 95);
-  --accent: oklch(0.95 0.018 163);
-  --accent-foreground: oklch(0.30 0.06 163);
-  --destructive: oklch(0.55 0.20 25);
-  --border: oklch(0.925 0.004 95);
-  --input: oklch(0.925 0.004 95);
-  --ring: oklch(0.46 0.098 163);
+  /* Accent primário: CIANO elétrico (#00D4FF) — pins, CTAs, ativos */
+  --primary: oklch(0.78 0.15 220);
+  --primary-foreground: oklch(0.16 0.020 255);
+  /* Secondary: superfície elevated sobre o navy */
+  --secondary: oklch(0.27 0.022 255);
+  --secondary-foreground: oklch(0.96 0.004 240);
+  --muted: oklch(0.25 0.020 255);
+  --muted-foreground: oklch(0.68 0.015 240);
+  /* Accent: ciano mais translúcido para destaques suaves */
+  --accent: oklch(0.32 0.06 220);
+  --accent-foreground: oklch(0.82 0.13 220);
+  --destructive: oklch(0.62 0.22 22);
+  --border: oklch(1 0 0 / 7%);
+  --input: oklch(1 0 0 / 9%);
+  --ring: oklch(0.78 0.15 220);
 
-  /* Semânticas */
-  --success: oklch(0.55 0.12 155);
-  --warning: oklch(0.72 0.15 70);
-  --info: oklch(0.55 0.10 230);
+  /* Semânticas — tons que combinam com navy/ciano */
+  --success: oklch(0.72 0.15 165);
+  --warning: oklch(0.78 0.15 75);
+  --info: oklch(0.70 0.13 220);
 
-  --chart-1: oklch(0.46 0.098 163);
-  --chart-2: oklch(0.60 0.10 200);
-  --chart-3: oklch(0.72 0.15 70);
-  --chart-4: oklch(0.55 0.16 300);
-  --chart-5: oklch(0.65 0.18 30);
+  /* Chart colors — alinhados à paleta LOCVIA */
+  --chart-1: oklch(0.78 0.15 220);
+  --chart-2: oklch(0.72 0.15 165);
+  --chart-3: oklch(0.78 0.15 75);
+  --chart-4: oklch(0.65 0.18 300);
+  --chart-5: oklch(0.70 0.18 30);
 
-  --sidebar: oklch(0.99 0.002 95);
-  --sidebar-foreground: oklch(0.20 0.008 95);
-  --sidebar-primary: oklch(0.46 0.098 163);
-  --sidebar-primary-foreground: oklch(0.99 0.004 95);
-  --sidebar-accent: oklch(0.95 0.018 163);
-  --sidebar-accent-foreground: oklch(0.30 0.06 163);
-  --sidebar-border: oklch(0.925 0.004 95);
-  --sidebar-ring: oklch(0.46 0.098 163);
+  --sidebar: oklch(0.20 0.018 255);
+  --sidebar-foreground: oklch(0.98 0.003 240);
+  --sidebar-primary: oklch(0.78 0.15 220);
+  --sidebar-primary-foreground: oklch(0.16 0.020 255);
+  --sidebar-accent: oklch(0.28 0.04 220);
+  --sidebar-accent-foreground: oklch(0.82 0.13 220);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.78 0.15 220);
 
-  /* Sombras — extremamente sutis, naturais */
-  --shadow-xs: 0 1px 2px rgba(20, 28, 24, 0.04);
-  --shadow-sm: 0 1px 2px rgba(20, 28, 24, 0.05), 0 1px 3px rgba(20, 28, 24, 0.04);
-  --shadow-md: 0 2px 4px rgba(20, 28, 24, 0.05), 0 4px 12px rgba(20, 28, 24, 0.06);
-  --shadow-lg: 0 4px 8px rgba(20, 28, 24, 0.06), 0 12px 28px rgba(20, 28, 24, 0.10);
-  --shadow-xl: 0 8px 16px rgba(20, 28, 24, 0.08), 0 24px 48px rgba(20, 28, 24, 0.14);
-  --shadow-map: 0 2px 5px rgba(20, 28, 24, 0.12), 0 6px 16px rgba(20, 28, 24, 0.10);
-  --shadow-map-hover: 0 3px 6px rgba(20, 28, 24, 0.14), 0 12px 28px rgba(20, 28, 24, 0.16);
-  --shadow-map-selected: 0 4px 10px rgba(20, 28, 24, 0.22), 0 14px 34px rgba(20, 28, 24, 0.22);
+  /* Sombras — profundidade sobre dark (glow sutil) */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.40), 0 12px 28px rgba(0, 0, 0, 0.45);
+  --shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.45), 0 24px 48px rgba(0, 0, 0, 0.55);
+  --shadow-map: 0 2px 6px rgba(0, 0, 0, 0.45), 0 6px 16px rgba(0, 0, 0, 0.35);
+  --shadow-map-hover: 0 4px 10px rgba(0, 0, 0, 0.50), 0 12px 28px rgba(0, 0, 0, 0.45);
+  --shadow-map-selected: 0 4px 12px rgba(0, 212, 255, 0.35), 0 14px 34px rgba(0, 0, 0, 0.55);
+  /* Glow ciano para estados ativos/selecionados */
+  --glow-primary: 0 0 0 3px oklch(0.78 0.15 220 / 0.25), 0 0 20px oklch(0.78 0.15 220 / 0.20);
 
   /* Easings */
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
@@ -111,26 +118,26 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/* Dark mode — arquitetura pronta (não ativo por padrão no v1) */
+/* Light mode — mantido para compat, mas dark é o padrão oficial LOCVIA */
 .dark {
-  --background: oklch(0.16 0.006 95);
-  --foreground: oklch(0.96 0.004 95);
-  --card: oklch(0.205 0.006 95);
-  --card-foreground: oklch(0.96 0.004 95);
-  --popover: oklch(0.205 0.006 95);
-  --popover-foreground: oklch(0.96 0.004 95);
-  --primary: oklch(0.62 0.11 163);
-  --primary-foreground: oklch(0.16 0.006 95);
-  --secondary: oklch(0.26 0.008 95);
-  --secondary-foreground: oklch(0.92 0.004 95);
-  --muted: oklch(0.24 0.006 95);
-  --muted-foreground: oklch(0.68 0.008 95);
-  --accent: oklch(0.28 0.03 163);
-  --accent-foreground: oklch(0.90 0.06 163);
-  --destructive: oklch(0.65 0.19 25);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.62 0.11 163);
+  --background: oklch(0.18 0.018 255);
+  --foreground: oklch(0.98 0.003 240);
+  --card: oklch(0.22 0.020 255);
+  --card-foreground: oklch(0.98 0.003 240);
+  --popover: oklch(0.22 0.020 255);
+  --popover-foreground: oklch(0.98 0.003 240);
+  --primary: oklch(0.78 0.15 220);
+  --primary-foreground: oklch(0.16 0.020 255);
+  --secondary: oklch(0.27 0.022 255);
+  --secondary-foreground: oklch(0.96 0.004 240);
+  --muted: oklch(0.25 0.020 255);
+  --muted-foreground: oklch(0.68 0.015 240);
+  --accent: oklch(0.32 0.06 220);
+  --accent-foreground: oklch(0.82 0.13 220);
+  --destructive: oklch(0.62 0.22 22);
+  --border: oklch(1 0 0 / 7%);
+  --input: oklch(1 0 0 / 9%);
+  --ring: oklch(0.78 0.15 220);
 }
 
 @layer base {
@@ -178,12 +185,12 @@ html, body { overflow-x: hidden; }
 /* Scrollbar minimalista */
 .scroll-area::-webkit-scrollbar { width: 8px; height: 8px; }
 .scroll-area::-webkit-scrollbar-track { background: transparent; }
-.scroll-area::-webkit-scrollbar-thumb { background: rgba(20,28,24,.12); border-radius: 999px; }
-.scroll-area::-webkit-scrollbar-thumb:hover { background: rgba(20,28,24,.22); }
+.scroll-area::-webkit-scrollbar-thumb { background: rgba(0, 212, 255, 0.18); border-radius: 999px; }
+.scroll-area::-webkit-scrollbar-thumb:hover { background: rgba(0, 212, 255, 0.32); }
 
 /* Glass / frosted surface sobre o mapa */
 .glass-surface {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(19, 28, 49, 0.82);
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
 }
@@ -235,9 +242,9 @@ html, body { overflow-x: hidden; }
 .skeleton-premium {
   background: linear-gradient(
     90deg,
-    oklch(0.955 0.004 95) 0%,
-    oklch(0.935 0.005 95) 50%,
-    oklch(0.955 0.004 95) 100%
+    oklch(0.22 0.020 255) 0%,
+    oklch(0.28 0.022 255) 50%,
+    oklch(0.22 0.020 255) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s infinite linear;
@@ -254,14 +261,14 @@ html, body { overflow-x: hidden; }
 .leaflet-container {
   width: 100%;
   height: 100%;
-  background: #eef0ec;
+  background: #0b1120;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   z-index: 0;
   font-variant-numeric: tabular-nums;
 }
-/* Suaviza os tiles — mapa como tela de informação, não cartografia ruidosa */
+/* Tiles dark LOCVIA — mapa como tela de informação escura */
 .leaflet-tile-pane {
-  filter: saturate(0.82) brightness(1.015) contrast(0.99);
+  filter: invert(0.92) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.7);
 }
 
 .leaflet-control-zoom {
@@ -272,8 +279,8 @@ html, body { overflow-x: hidden; }
   margin-bottom: 14px !important;
 }
 .leaflet-control-zoom a {
-  background: white !important;
-  color: oklch(0.30 0.02 95) !important;
+  background: var(--card) !important;
+  color: var(--foreground) !important;
   border: none !important;
   width: 38px !important;
   height: 38px !important;
@@ -287,7 +294,7 @@ html, body { overflow-x: hidden; }
   color: var(--primary) !important;
 }
 .leaflet-control-attribution {
-  background: rgba(255,255,255,0.7) !important;
+  background: rgba(11, 17, 32, 0.75) !important;
   backdrop-filter: blur(6px);
   font-size: 10px !important;
   color: var(--muted-foreground) !important;
@@ -303,10 +310,11 @@ html, body { overflow-x: hidden; }
   box-shadow: var(--shadow-lg) !important;
   padding: 0 !important;
   overflow: hidden;
-  border: 1px solid rgba(20,28,24,0.06);
+  background: var(--card) !important;
+  border: 1px solid var(--border);
 }
 .leaflet-popup-content { margin: 0 !important; width: auto !important; }
-.leaflet-popup-tip { box-shadow: var(--shadow-sm) !important; }
+.leaflet-popup-tip { box-shadow: var(--shadow-sm) !important; background: var(--card) !important; }
 .leaflet-popup-close-button { display: none !important; }
 
 /* ============================================================
@@ -321,16 +329,17 @@ html, body { overflow-x: hidden; }
 }
 
 .price-marker {
-  background: #ffffff;
+  background: var(--card);
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 12.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: oklch(0.22 0.012 95);
+  color: var(--foreground);
   white-space: nowrap;
   box-shadow: var(--shadow-map);
-  transition: transform 0.18s var(--ease-spring), box-shadow 0.18s var(--ease-spring), background 0.15s, color 0.15s;
+  border: 1px solid var(--border);
+  transition: transform 0.18s var(--ease-spring), box-shadow 0.18s var(--ease-spring), background 0.15s, color 0.15s, border-color 0.15s;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -341,6 +350,7 @@ html, body { overflow-x: hidden; }
 .price-marker:hover {
   transform: translateY(-2px) scale(1.05);
   box-shadow: var(--shadow-map-hover);
+  border-color: var(--primary);
   z-index: 1000 !important;
 }
 .price-marker.is-featured {
@@ -352,17 +362,20 @@ html, body { overflow-x: hidden; }
   border-radius: 999px;
   background: var(--primary);
   flex-shrink: 0;
+  box-shadow: 0 0 8px var(--primary);
 }
 .price-marker.is-selected {
-  background: oklch(0.22 0.012 95);
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
   transform: scale(1.10);
-  box-shadow: var(--shadow-map-selected);
+  box-shadow: var(--shadow-map-selected), var(--glow-primary);
   z-index: 1100 !important;
   padding: 7px 13px;
 }
 .price-marker.is-selected.is-featured .badge-dot {
   background: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
 }
 .price-marker.is-selected::after {
   content: "";
@@ -371,7 +384,7 @@ html, body { overflow-x: hidden; }
   bottom: -3px;
   width: 8px;
   height: 8px;
-  background: oklch(0.22 0.012 95);
+  background: var(--primary);
   transform: translateX(-50%) rotate(45deg);
   border-radius: 1px;
 }
@@ -381,7 +394,7 @@ html, body { overflow-x: hidden; }
    CLUSTER — minimalista, sofisticado
    ============================================================ */
 .marker-cluster {
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--card);
   color: var(--primary);
   border-radius: 999px;
   display: flex;
@@ -391,14 +404,15 @@ html, body { overflow-x: hidden; }
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   box-shadow: var(--shadow-map);
-  border: 1.5px solid rgba(20, 28, 24, 0.06);
+  border: 1.5px solid var(--border);
   cursor: pointer;
-  transition: transform 0.18s var(--ease-spring), box-shadow 0.18s var(--ease-spring);
+  transition: transform 0.18s var(--ease-spring), box-shadow 0.18s var(--ease-spring), border-color 0.18s;
   letter-spacing: -0.02em;
 }
 .marker-cluster:hover {
   transform: scale(1.08);
-  box-shadow: var(--shadow-map-hover);
+  box-shadow: var(--shadow-map-hover), var(--glow-primary);
+  border-color: var(--primary);
 }
 .marker-cluster span { line-height: 1; }
 
@@ -416,7 +430,7 @@ html, body { overflow-x: hidden; }
   background: var(--primary);
   border: 3px solid #ffffff;
   border-radius: 999px;
-  box-shadow: 0 1px 4px rgba(20, 28, 24, 0.35);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5), 0 0 12px var(--primary);
   z-index: 2;
 }
 .user-marker .pulse {
@@ -436,14 +450,14 @@ html, body { overflow-x: hidden; }
    BOTÃO FLUTUANTE "PESQUISAR NESTA ÁREA"
    ============================================================ */
 .search-area-btn {
-  background: #ffffff;
-  color: var(--foreground);
+  background: var(--primary);
+  color: var(--primary-foreground);
   border-radius: 999px;
   padding: 10px 18px;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(20, 28, 24, 0.06);
+  box-shadow: var(--shadow-lg), var(--glow-primary);
+  border: none;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -453,12 +467,12 @@ html, body { overflow-x: hidden; }
 }
 .search-area-btn:hover {
   transform: translateY(-1px);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-xl), var(--glow-primary);
 }
 .search-area-btn .ring {
   width: 14px;
   height: 14px;
-  border: 2px solid var(--primary);
+  border: 2px solid var(--primary-foreground);
   border-top-color: transparent;
   border-radius: 999px;
   animation: spin 0.9s linear infinite;
@@ -477,9 +491,9 @@ html, body { overflow-x: hidden; }
   height: 36px;
   padding: 0 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(20, 28, 48, 0.78);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(20, 28, 24, 0.08);
+  border: 1px solid var(--border);
   font-size: 13px;
   font-weight: 500;
   color: var(--foreground);
@@ -490,18 +504,19 @@ html, body { overflow-x: hidden; }
   user-select: none;
 }
 .filter-chip:hover {
-  background: #ffffff;
-  border-color: rgba(20, 28, 24, 0.14);
+  background: var(--secondary);
+  border-color: var(--primary);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 .filter-chip.is-active {
-  background: var(--foreground);
-  color: #ffffff;
-  border-color: var(--foreground);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm), var(--glow-primary);
 }
 .filter-chip.is-active:hover {
-  background: oklch(0.15 0.01 95);
+  background: oklch(0.72 0.15 220);
 }
 .filter-chip .chip-count {
   display: inline-grid;
@@ -516,7 +531,7 @@ html, body { overflow-x: hidden; }
   font-weight: 700;
 }
 .filter-chip.is-active .chip-count {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.28);
   color: #fff;
 }
 
@@ -528,17 +543,18 @@ html, body { overflow-x: hidden; }
   height: 42px;
   display: grid;
   place-items: center;
-  background: #ffffff;
+  background: var(--card);
   border-radius: 13px;
   box-shadow: var(--shadow-md);
-  border: 1px solid rgba(20, 28, 24, 0.05);
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.16s var(--ease-out);
-  color: oklch(0.30 0.02 95);
+  color: var(--foreground);
 }
 .map-overlay-btn:hover {
-  background: var(--accent);
+  background: var(--secondary);
   color: var(--primary);
+  border-color: var(--primary);
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
 }
@@ -546,6 +562,7 @@ html, body { overflow-x: hidden; }
   background: var(--primary);
   color: var(--primary-foreground);
   border-color: var(--primary);
+  box-shadow: var(--shadow-md), var(--glow-primary);
 }
 
 /* ============================================================
@@ -563,7 +580,7 @@ html, body { overflow-x: hidden; }
 .property-card:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-lg);
-  border-color: rgba(20, 28, 24, 0.08);
+  border-color: var(--primary);
 }
 .property-card .card-img-wrap {
   position: relative;
@@ -590,13 +607,14 @@ html, body { overflow-x: hidden; }
   letter-spacing: -0.01em;
   box-shadow: var(--shadow-sm);
 }
-.img-badge.featured { background: var(--primary); color: var(--primary-foreground); }
+.img-badge.featured { background: var(--primary); color: var(--primary-foreground); box-shadow: var(--shadow-sm), 0 0 12px oklch(0.78 0.15 220 / 0.4); }
 .img-badge.offer { background: var(--warning); color: #ffffff; }
-.img-badge.recommended { background: oklch(0.40 0.14 300); color: #ffffff; }
+.img-badge.recommended { background: oklch(0.55 0.16 300); color: #ffffff; }
 .img-badge.distance {
-  background: rgba(255,255,255,0.92);
+  background: rgba(11, 17, 32, 0.78);
   backdrop-filter: blur(8px);
   color: var(--foreground);
+  border: 1px solid var(--border);
 }
 
 /* Botão de favorito sobre imagem */
@@ -606,21 +624,22 @@ html, body { overflow-x: hidden; }
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(11, 17, 32, 0.72);
   backdrop-filter: blur(8px);
   box-shadow: var(--shadow-sm);
-  border: none;
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.16s var(--ease-out);
-  color: oklch(0.40 0.02 95);
+  color: var(--foreground);
 }
 .fav-btn:hover {
-  background: #ffffff;
+  background: var(--secondary);
   transform: scale(1.08);
   box-shadow: var(--shadow-md);
 }
 .fav-btn.is-fav {
-  color: oklch(0.62 0.22 15);
+  color: oklch(0.68 0.22 15);
+  background: rgba(11, 17, 32, 0.85);
 }
 
 /* ============================================================

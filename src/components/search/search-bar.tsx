@@ -72,8 +72,8 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
           }}
           placeholder="Buscar bairro, endereço ou cidade"
           className={cn(
-            "pl-10 pr-9 h-11 rounded-full glass-surface shadow-md border border-black/5",
-            "placeholder:text-muted-foreground/70 text-sm font-medium focus:bg-white"
+            "pl-10 pr-9 h-11 rounded-full glass-surface shadow-md border border-border",
+            "placeholder:text-muted-foreground/70 text-sm font-medium focus:bg-secondary"
           )}
         />
         {query && (
@@ -96,7 +96,7 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
       </form>
 
       {open && visibleResults.length > 0 && (
-        <div className="absolute z-[1200] mt-2 w-full bg-white rounded-2xl shadow-xl border border-black/5 overflow-hidden max-h-80 overflow-y-auto scroll-area animate-scale-in">
+        <div className="absolute z-[1200] mt-2 w-full bg-card rounded-2xl shadow-xl border border-border overflow-hidden max-h-80 overflow-y-auto scroll-area animate-scale-in">
           {visibleResults.map((r, i) => (
             <button
               key={i}

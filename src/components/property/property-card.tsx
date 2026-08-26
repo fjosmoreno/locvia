@@ -132,7 +132,7 @@ export function PropertyCard({ property }: { property: Property }) {
         </div>
 
         {property.advertiser?.verified && (
-          <div className="flex items-center gap-1 text-[10px] text-emerald-700 font-medium pt-1">
+          <div className="flex items-center gap-1 text-[10px] text-primary font-medium pt-1">
             <BadgeCheck className="w-3 h-3" /> Anunciante verificado
           </div>
         )}
