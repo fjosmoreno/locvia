@@ -171,14 +171,35 @@ export function publicWhere(input: {
     and.push({ longitude: { gte: input.bbox.minLng, lte: input.bbox.maxLng } });
   }
   if (input.search) {
-    and.push({
-      OR: [
-        { title: { contains: input.search } },
-        { neighborhood: { contains: input.search } },
-        { city: { contains: input.search } },
-        { address: { contains: input.search } },
-      ],
-    });
+    // Busca token-based: quebra o search em palavras e exige que TODAS
+    // apareçam em algum campo (neighborhood/city/address/title).
+    // Assim "Eldorado Contagem" encontra bairro=Eldorado + cidade=Contagem.
+    const tokens = input.search
+      .split(/[\s,]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 2);
+    if (tokens.length === 1) {
+      and.push({
+        OR: [
+          { title: { contains: tokens[0] } },
+          { neighborhood: { contains: tokens[0] } },
+          { city: { contains: tokens[0] } },
+          { address: { contains: tokens[0] } },
+        ],
+      });
+    } else if (tokens.length > 1) {
+      // cada token deve aparecer em algum campo
+      for (const tok of tokens) {
+        and.push({
+          OR: [
+            { title: { contains: tok } },
+            { neighborhood: { contains: tok } },
+            { city: { contains: tok } },
+            { address: { contains: tok } },
+          ],
+        });
+      }
+    }
   }
   return { AND: and };
 }
