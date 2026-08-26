@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -19,43 +19,24 @@ import { DEFAULT_CENTER, DEFAULT_ZOOM } from "@/lib/constants";
 import { MapControls, SearchInAreaPrompt } from "@/components/map/map-overlays";
 import type { Property } from "@/lib/types";
 
-// ---------- Helpers de ícone ----------
+// ---------- Ícones ----------
 
 function priceIcon(p: Property, selected: boolean) {
   const featuredCls = p.featured ? " is-featured" : "";
   const selectedCls = selected ? " is-selected" : "";
-  const badge = p.badge === "OFFER" ? '<span class="badge-dot"></span>' : "";
+  const badge = p.featured ? '<span class="badge-dot"></span>' : "";
   const label = formatPrice(p.price, p.purpose);
   return L.divIcon({
-    html: `<div class="price-marker${featuredCls}${selectedCls}">${badge}<span>${label}</span></div>`,
+    html: `<div class="marker-wrap"><div class="price-marker${featuredCls}${selectedCls}">${badge}<span>${label}</span></div></div>`,
     className: "",
     iconSize: [0, 0],
     iconAnchor: [0, 0],
   });
 }
 
-function houseIcon(p: Property, selected: boolean) {
-  const featuredCls = p.featured ? " is-featured" : "";
-  const emoji =
-    p.propertyType === "SHOP"
-      ? "🏬"
-      : p.propertyType === "COMMERCIAL_ROOM"
-      ? "🏢"
-      : p.propertyType === "HOUSE"
-      ? "🏠"
-      : "🏢";
-  const sel = selected ? " is-selected" : "";
-  return L.divIcon({
-    html: `<div class="house-marker${featuredCls}${sel}"><span>${emoji}</span></div>`,
-    className: "",
-    iconSize: [34, 34],
-    iconAnchor: [17, 34],
-  });
-}
-
 function clusterIcon(cluster: any) {
   const count = cluster.getChildCount();
-  const size = count < 10 ? 38 : count < 50 ? 48 : 58;
+  const size = count < 10 ? 40 : count < 30 ? 46 : 54;
   return L.divIcon({
     html: `<div class="marker-cluster" style="width:${size}px;height:${size}px"><span>${count}</span></div>`,
     className: "",
@@ -66,14 +47,14 @@ function clusterIcon(cluster: any) {
 
 function userIcon() {
   return L.divIcon({
-    html: `<div class="user-marker"></div>`,
+    html: `<div class="user-marker"><div class="pulse"></div><div class="dot"></div></div>`,
     className: "",
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
   });
 }
 
-// ---------- Controladores internos ----------
+// ---------- Controladores ----------
 
 function MapController() {
   const map = useMap();
@@ -83,7 +64,8 @@ function MapController() {
   useEffect(() => {
     if (!flyToTarget) return;
     map.flyTo([flyToTarget.lat, flyToTarget.lng], flyToTarget.zoom ?? map.getZoom(), {
-      duration: 0.8,
+      duration: 0.85,
+      easeLinearity: 0.25,
     });
   }, [flyToTarget, map]);
 
@@ -95,7 +77,7 @@ function MapController() {
   return null;
 }
 
-function MapEvents({ onZoom }: { onZoom: (z: number) => void }) {
+function MapEvents() {
   const setMapBbox = useUI((s) => s.setMapBbox);
   const setMapCenter = useUI((s) => s.setMapCenter);
   const setSearchInAreaPrompt = useUI((s) => s.setSearchInAreaPrompt);
@@ -112,14 +94,22 @@ function MapEvents({ onZoom }: { onZoom: (z: number) => void }) {
       });
       const c = map.getCenter();
       setMapCenter({ lat: c.lat, lng: c.lng });
-      window.setTimeout(() => setSearchInAreaPrompt(false), 700);
+      window.setTimeout(() => setSearchInAreaPrompt(false), 800);
     },
-    zoomend: () => onZoom(map.getZoom()),
+    zoomend: () => {
+      const b = map.getBounds();
+      setMapBbox({
+        minLat: b.getSouth(),
+        maxLat: b.getNorth(),
+        minLng: b.getWest(),
+        maxLng: b.getEast(),
+      });
+    },
   });
   return null;
 }
 
-// ---------- Componente principal ----------
+// ---------- Componente ----------
 
 export default function MapView() {
   const {
@@ -132,7 +122,6 @@ export default function MapView() {
     setPropertiesError,
   } = useUI();
 
-  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const query = useProperties(true);
 
   useEffect(() => {
@@ -164,14 +153,19 @@ export default function MapView() {
       zoomControl={false}
       className="h-full w-full"
       preferCanvas
+      zoomSnap={0.5}
+      wheelPxPerZoomLevel={120}
     >
+      {/* Positron — canvas minimalista premium */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://carto.com/">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        subdomains="abcd"
+        maxZoom={20}
       />
 
       <MapController />
-      <MapEvents onZoom={setZoom} />
+      <MapEvents />
       <MapControls />
       <SearchInAreaPrompt />
 
@@ -179,18 +173,18 @@ export default function MapView() {
         iconCreateFunction={clusterIcon}
         showCoverageOnHover={false}
         spiderfyOnMaxZoom
-        maxClusterRadius={52}
+        maxClusterRadius={56}
         chunkedLoading
+        animate
       >
         {properties.map((p) => {
           const isSelected = p.id === selectedPropertyId;
-          const icon = zoom >= 16 ? houseIcon(p, isSelected) : priceIcon(p, isSelected);
           return (
             <Marker
               key={p.id}
               position={[p.latitude, p.longitude]}
-              icon={icon}
-              zIndexOffset={isSelected ? 1000 : p.featured ? 500 : 0}
+              icon={priceIcon(p, isSelected)}
+              zIndexOffset={isSelected ? 1100 : p.featured ? 500 : 0}
               eventHandlers={{ click: () => openProperty(p) }}
             />
           );
@@ -204,15 +198,16 @@ export default function MapView() {
             icon={userIcon()}
             zIndexOffset={2000}
           />
-          {userLocation.accuracy && (
+          {userLocation.accuracy && userLocation.accuracy < 500 && (
             <Circle
               center={[userLocation.lat, userLocation.lng]}
               radius={userLocation.accuracy}
               pathOptions={{
-                color: "#2563eb",
-                fillColor: "#2563eb",
-                fillOpacity: 0.08,
+                color: "var(--primary)",
+                fillColor: "var(--primary)",
+                fillOpacity: 0.06,
                 weight: 1,
+                opacity: 0.3,
               }}
             />
           )}

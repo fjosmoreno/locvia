@@ -62,18 +62,18 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
   return (
     <div className="relative w-full">
       <form onSubmit={submitTextSearch} className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => visibleResults.length && setOpen(true)}
+          onFocus={() => setOpen(true)}
           onBlur={() => {
             blurTimer.current = setTimeout(() => setOpen(false), 180);
           }}
-          placeholder="Buscar endereço, bairro ou cidade"
+          placeholder="Buscar bairro, endereço ou cidade"
           className={cn(
-            "pl-9 pr-9 h-11 rounded-full bg-white/95 backdrop-blur shadow-md border-white",
-            "placeholder:text-muted-foreground/80 text-sm"
+            "pl-10 pr-9 h-11 rounded-full glass-surface shadow-md border border-black/5",
+            "placeholder:text-muted-foreground/70 text-sm font-medium focus:bg-white"
           )}
         />
         {query && (
@@ -84,7 +84,7 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
               setDebounced("");
               setFilters({ search: undefined });
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
             aria-label="Limpar busca"
           >
             <X className="w-4 h-4" />
@@ -96,7 +96,7 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
       </form>
 
       {open && visibleResults.length > 0 && (
-        <div className="absolute z-[1200] mt-2 w-full bg-white rounded-2xl shadow-xl border border-border overflow-hidden max-h-80 overflow-y-auto scroll-area">
+        <div className="absolute z-[1200] mt-2 w-full bg-white rounded-2xl shadow-xl border border-black/5 overflow-hidden max-h-80 overflow-y-auto scroll-area animate-scale-in">
           {visibleResults.map((r, i) => (
             <button
               key={i}
@@ -105,9 +105,11 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
                 if (blurTimer.current) clearTimeout(blurTimer.current);
                 pick(r);
               }}
-              className="w-full text-left px-4 py-2.5 hover:bg-accent/60 flex items-start gap-3 border-b border-border/60 last:border-0"
+              className="w-full text-left px-4 py-2.5 hover:bg-accent/60 flex items-start gap-3 border-b border-border/50 last:border-0 transition-colors"
             >
-              <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div className="w-7 h-7 rounded-lg bg-primary/10 grid place-items-center text-primary shrink-0 mt-0.5">
+                <MapPin className="w-3.5 h-3.5" />
+              </div>
               <div className="min-w-0">
                 <div className="text-sm font-medium text-foreground clamp-1">
                   {r.displayName.split(",")[0]}

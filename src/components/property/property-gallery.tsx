@@ -48,10 +48,10 @@ export function PropertyGallery({
   return (
     <>
       <div className="relative group">
-        <div className="overflow-hidden rounded-xl" ref={emblaRef}>
+        <div className="gallery-embla" ref={emblaRef}>
           <div className="flex">
             {images.map((im) => (
-              <div key={im.id} className="flex-[0_0_100%] min-w-0">
+              <div key={im.id} className="gallery-embla__slide">
                 { }
                 <img
                   src={im.url}

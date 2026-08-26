@@ -32,31 +32,19 @@ export function ResultsPanel() {
   const count = properties.length;
 
   return (
-    <div className="flex flex-col h-full bg-card">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-card/95 backdrop-blur sticky top-0 z-10">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <div className="text-sm font-semibold text-foreground">
-              {loadingProperties ? "Buscando…" : `${count} ${count === 1 ? "imóvel" : "imóveis"}`}
-            </div>
-            <div className="text-[11px] text-muted-foreground">
-              {filters.purpose
-                ? filters.purpose === "RENT"
-                  ? "Para alugar"
-                  : "Para comprar"
-                : "Aluguel e venda"}{" "}
-              {filters.radius && userLocation ? `· até ${DISTANCE_OPTIONS.find((d) => d.value === filters.radius)?.label}` : ""}
-            </div>
+    <div className="flex flex-col h-full bg-background">
+      {/* Header — eyebrow + count */}
+      <div className="px-4 py-3.5 border-b border-border bg-background/95 backdrop-blur sticky top-0 z-10">
+        <div className="eyebrow">Resultados</div>
+        <div className="flex items-center justify-between gap-2 mt-0.5">
+          <div className="text-sm font-semibold text-foreground">
+            {loadingProperties && count === 0 ? "Buscando imóveis…" : `${count} ${count === 1 ? "imóvel" : "imóveis"}`}
+            {filters.purpose && (
+              <span className="text-muted-foreground font-normal ml-1.5">
+                · {filters.purpose === "RENT" ? "Aluguel" : "Venda"}
+              </span>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => openDrawer("filters")}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 mr-1" /> Filtros
-          </Button>
         </div>
       </div>
 
@@ -130,8 +118,8 @@ function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-16 px-6">
-      <div className="w-16 h-16 rounded-2xl bg-muted grid place-items-center text-muted-foreground mb-4">
+    <div className="flex flex-col items-center justify-center text-center py-20 px-6 animate-fade-in">
+      <div className="w-16 h-16 rounded-2xl bg-muted grid place-items-center text-muted-foreground/60 mb-4">
         {icon}
       </div>
       <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>

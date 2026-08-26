@@ -8,19 +8,20 @@ import { Providers } from "@/components/providers";
 const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "MapImóvel — Encontre imóveis no mapa",
+  title: "MapImóvel — Imóveis no mapa, ao seu redor",
   description:
-    "A plataforma imobiliária map-first. Abra o mapa e descubra casas, apartamentos, lojas e salas comerciais ao seu redor.",
+    "A plataforma imobiliária map-first. Abra o mapa e descubra casas, apartamentos, lojas e salas comerciais disponíveis ao seu redor, em tempo real.",
   keywords: [
     "imóveis", "mapa imobiliário", "alugar", "comprar", "apartamento", "casa",
     "loja", "sala comercial", "Belo Horizonte", "imobiliária",
   ],
   authors: [{ name: "MapImóvel" }],
   openGraph: {
-    title: "MapImóvel — Encontre imóveis no mapa",
+    title: "MapImóvel — Imóveis no mapa, ao seu redor",
     description:
       "O mapa é o produto. Descubra imóveis disponíveis ao seu redor, em tempo real.",
     siteName: "MapImóvel",
@@ -38,7 +39,7 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#0f766e",
+  themeColor: "#0f3d2e",
 };
 
 export default function RootLayout({
@@ -52,7 +53,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <Toaster />
-          <SonnerToaster position="top-center" richColors />
+          <SonnerToaster position="top-center" richColors toastOptions={{ style: { borderRadius: "12px" } }} />
         </Providers>
       </body>
     </html>
