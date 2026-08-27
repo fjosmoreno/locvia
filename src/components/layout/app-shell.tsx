@@ -18,6 +18,10 @@ import { MobilePanel } from "@/components/layout/mobile-panel";
 import { FilterChips } from "@/components/filters/filter-chips";
 import { AiPanel } from "@/components/ai/ai-panel";
 import { RoutePanel } from "@/components/route/route-panel";
+import { CompareDrawer } from "@/components/compare/compare-drawer";
+import { HistoryDrawer } from "@/components/history/history-drawer";
+import { SavedSearchesDrawer } from "@/components/saved-searches/saved-searches-drawer";
+import { FloatingShortcuts } from "@/components/layout/floating-shortcuts";
 import { cn } from "@/lib/utils";
 
 export function AppShell() {
@@ -58,6 +62,7 @@ export function AppShell() {
         <LocationPermissionPrompt />
         <AiPanel />
         <RoutePanel />
+        <FloatingShortcuts />
       </div>
 
       {/* Painel lateral — desktop */}
@@ -87,6 +92,9 @@ export function AppShell() {
       <FilterSheet />
       <AuthModal />
       <FavoritesDrawer />
+      <HistoryDrawer />
+      <CompareDrawer />
+      <SavedSearchesDrawer />
       <AgencyDashboard />
       <AdminDashboard />
       <ReportModal />

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { Filters, Property, UserLocation, PanelView } from "@/lib/types";
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from "@/lib/constants";
 
-type DrawerKind = null | "auth" | "favorites" | "agency" | "admin" | "filters" | "report";
+type DrawerKind = null | "auth" | "favorites" | "agency" | "admin" | "filters" | "report" | "history" | "compare" | "saved-searches";
 
 // Estado robusto de geolocalização (máquina de estados única)
 export type LocationStatus =
@@ -92,6 +92,8 @@ interface UIState {
   ai: AiContext;
   // LOCVIA ROUTE — imóveis no caminho
   route: RouteContext;
+  // Comparador de imóveis (até 3)
+  compareIds: string[];
 
   // actions
   setPanelView: (v: PanelView) => void;
@@ -137,6 +139,9 @@ interface UIState {
   setRouteLoading: (v: boolean) => void;
   setRouteError: (e: string | null) => void;
   clearRoute: () => void;
+  // Comparador
+  toggleCompare: (id: string) => void;
+  clearCompare: () => void;
   setLoadingProperties: (v: boolean) => void;
   setPropertiesError: (e: string | null) => void;
   flyTo: (lat: number, lng: number, zoom?: number) => void;
@@ -264,6 +269,8 @@ export const useUI = create<UIState>((set, get) => ({
     properties: [],
     error: null,
   },
+  // Comparador — vazio
+  compareIds: [],
 
   setPanelView: (v) => set({ panelView: v }),
 
@@ -438,6 +445,16 @@ export const useUI = create<UIState>((set, get) => ({
         highlightSource: s.ai.highlightSource === "route" ? null : s.ai.highlightSource,
       },
     })),
+
+  // ---- Comparador ----
+  toggleCompare: (id) =>
+    set((s) => {
+      const exists = s.compareIds.includes(id);
+      if (exists) return { compareIds: s.compareIds.filter((x) => x !== id) };
+      if (s.compareIds.length >= 3) return { compareIds: [...s.compareIds.slice(1), id] };
+      return { compareIds: [...s.compareIds, id] };
+    }),
+  clearCompare: () => set({ compareIds: [] }),
 
   flyTo: (lat, lng, zoom) =>
     set((s) => ({ flyToTarget: { lat, lng, zoom, nonce: Date.now() } })),

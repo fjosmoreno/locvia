@@ -30,8 +30,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { PropertyGallery } from "@/components/property/property-gallery";
+import { FinanceCalculator } from "@/components/finance/finance-calculator";
 import { useUI } from "@/lib/store";
 import { useFavorite, useLead } from "@/hooks/use-favorite";
+import { useTrackView } from "@/hooks/use-history";
 import { formatPrice, formatDistance, formatRelativeTime } from "@/lib/geo";
 import { whatsappLink, directionsUrl } from "@/lib/geocode";
 import { PROPERTY_TYPE_LABELS, PURPOSE_LABELS } from "@/lib/constants";
@@ -125,6 +127,7 @@ export function PropertyDetail({ propertyId }: { propertyId: string }) {
   } = useUI();
   const { isFavorited, toggle } = useFavorite(propertyId);
   const lead = useLead();
+  const trackView = useTrackView();
   const [copied, setCopied] = useState(false);
   const [bounce, setBounce] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -162,6 +165,11 @@ export function PropertyDetail({ propertyId }: { propertyId: string }) {
 
   useEffect(() => {
     if (p) flyTo(p.latitude, p.longitude, 16);
+  }, [p?.id]);
+
+  // Registra visualização no histórico (best-effort, autenticado)
+  useEffect(() => {
+    if (p?.id) trackView.mutate(p.id);
   }, [p?.id]);
 
   if (isLoading && !p) {
@@ -440,6 +448,11 @@ export function PropertyDetail({ propertyId }: { propertyId: string }) {
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Calculadora de financiamento (apenas venda) */}
+          <div className="mt-4">
+            <FinanceCalculator price={p.price} purpose={p.purpose} />
           </div>
         </div>
 

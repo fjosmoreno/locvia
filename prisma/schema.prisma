@@ -34,6 +34,8 @@ model User {
   favorites     Favorite[]
   leads         Lead[]
   reports       Report[]
+  viewedProperties PropertyViewed[]
+  savedSearches SavedSearch[]
   sessions      Session[]
   accounts      Account[]
   payments      Payment[]
@@ -161,6 +163,7 @@ model Property {
   favorites Favorite[]
   leads     Lead[]
   reports   Report[]
+  viewedBy  PropertyViewed[]
 
   @@index([status])
   @@index([purpose])
@@ -180,6 +183,33 @@ model PropertyImage {
   createdAt  DateTime @default(now())
 
   @@index([propertyId])
+}
+
+// Histórico de imóveis visualizados por usuário
+model PropertyViewed {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  viewedAt   DateTime @default(now())
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+}
+
+// Buscas salvas (alertas de preço/novidade)
+model SavedSearch {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   // nome amigável do alerta
+  filters   String   // JSON serializado dos filtros
+  notify    Boolean  @default(true)
+  lastMatchCount Int  @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ============================================================
