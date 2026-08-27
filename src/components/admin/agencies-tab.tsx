@@ -14,6 +14,9 @@ import {
   Hash,
   FileBadge,
   Loader2,
+  Home as HomeIcon,
+  CreditCard,
+  CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -50,6 +53,7 @@ import {
   formatDate,
   type AgencyAdmin,
 } from "@/components/admin/shared";
+import { cn } from "@/lib/utils";
 
 type StatusFilter = "ALL" | "PENDING" | "APPROVED" | "BLOCKED";
 
@@ -138,12 +142,12 @@ export function AgenciesTab() {
   return (
     <div className="flex flex-col">
       {/* Filtros */}
-      <div className="p-3 border-b border-border bg-muted/30">
+      <div className="p-3 border-b border-border/60 bg-muted/20">
         <Select
           value={filter}
           onValueChange={(v) => setFilter(v as StatusFilter)}
         >
-          <SelectTrigger className="h-8 w-full sm:w-56 bg-background">
+          <SelectTrigger className="h-9 w-full sm:w-56 bg-background border-border/60">
             <SelectValue placeholder="Filtrar por status" />
           </SelectTrigger>
           <SelectContent>
@@ -173,127 +177,14 @@ export function AgenciesTab() {
       ) : (
         <div className="p-3 space-y-3">
           {data.agencies.map((a) => (
-            <div
+            <AgencyCard
               key={a.id}
-              className="rounded-xl border border-border bg-card p-4 space-y-3"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-foreground truncate">
-                      {a.name}
-                    </h3>
-                    {a.verified && (
-                      <BadgeCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <span>Cadastrada em {formatDate(a.createdAt)}</span>
-                  </div>
-                </div>
-                <AgencyStatusBadge status={a.status} />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                {a.cnpj && (
-                  <Info icon={<Hash className="w-3 h-3" />} label="CNPJ" value={a.cnpj} />
-                )}
-                {a.creci && (
-                  <Info
-                    icon={<FileBadge className="w-3 h-3" />}
-                    label="CRECI"
-                    value={a.creci}
-                  />
-                )}
-                {a.responsibleName && (
-                  <Info
-                    label="Responsável"
-                    value={a.responsibleName}
-                  />
-                )}
-                {a.email && (
-                  <Info
-                    icon={<Mail className="w-3 h-3" />}
-                    label="E-mail"
-                    value={a.email}
-                  />
-                )}
-                {a.phone && (
-                  <Info
-                    icon={<Phone className="w-3 h-3" />}
-                    label="Telefone"
-                    value={a.phone}
-                  />
-                )}
-                {a.user?.email && (
-                  <Info
-                    icon={<Mail className="w-3 h-3" />}
-                    label="Login"
-                    value={a.user.email}
-                  />
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <Badge info>
-                  {a._count?.properties ?? 0} imóvel(éis)
-                </Badge>
-                {a.subscription?.plan && (
-                  <Badge info>
-                    Plano: {a.subscription.plan.name}
-                  </Badge>
-                )}
-                <span className="flex-1" />
-                {a.status === "PENDING" && (
-                  <Button
-                    size="sm"
-                    onClick={() => approve(a)}
-                    disabled={updateMutation.isPending}
-                  >
-                    {updateMutation.isPending ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    )}
-                    Aprovar
-                  </Button>
-                )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="icon" variant="outline" className="h-8 w-8">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                    {a.status !== "APPROVED" && (
-                      <DropdownMenuItem onClick={() => approve(a)}>
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Aprovar e verificar
-                      </DropdownMenuItem>
-                    )}
-                    {a.status !== "PENDING" && (
-                      <DropdownMenuItem onClick={() => review(a)}>
-                        <RotateCcw className="w-3.5 h-3.5" /> Reavaliar
-                      </DropdownMenuItem>
-                    )}
-                    {a.status !== "BLOCKED" && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setBlockTarget(a)}
-                        >
-                          <Ban className="w-3.5 h-3.5" /> Bloquear
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+              agency={a}
+              onApprove={approve}
+              onReview={review}
+              onBlock={(ag) => setBlockTarget(ag)}
+              pending={updateMutation.isPending}
+            />
           ))}
         </div>
       )}
@@ -325,6 +216,155 @@ export function AgenciesTab() {
   );
 }
 
+function AgencyCard({
+  agency: a,
+  onApprove,
+  onReview,
+  onBlock,
+  pending,
+}: {
+  agency: AgencyAdmin;
+  onApprove: (a: AgencyAdmin) => void;
+  onReview: (a: AgencyAdmin) => void;
+  onBlock: (a: AgencyAdmin) => void;
+  pending: boolean;
+}) {
+  const isPending = a.status === "PENDING";
+  return (
+    <div
+      className={cn(
+        "rounded-xl border bg-card/60 backdrop-blur-sm p-4 space-y-3 transition-all duration-200 hover:bg-card hover:border-primary/30 hover:shadow-md",
+        isPending
+          ? "border-amber-500/40 ring-1 ring-amber-500/15"
+          : "border-border/60"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "w-11 h-11 rounded-xl grid place-items-center shrink-0 ring-1",
+            isPending
+              ? "bg-amber-500/15 text-amber-300 ring-amber-500/25"
+              : "bg-primary/12 text-primary ring-primary/20"
+          )}
+        >
+          <Building2 className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold text-foreground truncate tracking-tight">
+              {a.name}
+            </h3>
+            {a.verified && (
+              <BadgeCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            )}
+          </div>
+          <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+            <CalendarDays className="w-3 h-3" />
+            <span>Cadastrada em {formatDate(a.createdAt)}</span>
+          </div>
+        </div>
+        <AgencyStatusBadge status={a.status} />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs pt-1">
+        {a.cnpj && (
+          <Info icon={<Hash className="w-3 h-3" />} label="CNPJ" value={a.cnpj} />
+        )}
+        {a.creci && (
+          <Info
+            icon={<FileBadge className="w-3 h-3" />}
+            label="CRECI"
+            value={a.creci}
+          />
+        )}
+        {a.responsibleName && (
+          <Info label="Responsável" value={a.responsibleName} />
+        )}
+        {a.email && (
+          <Info
+            icon={<Mail className="w-3 h-3" />}
+            label="E-mail"
+            value={a.email}
+          />
+        )}
+        {a.phone && (
+          <Info
+            icon={<Phone className="w-3 h-3" />}
+            label="Telefone"
+            value={a.phone}
+          />
+        )}
+        {a.user?.email && (
+          <Info
+            icon={<Mail className="w-3 h-3" />}
+            label="Login"
+            value={a.user.email}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/40">
+        <MetaChip icon={<HomeIcon className="w-3 h-3" />}>
+          {a._count?.properties ?? 0} imóvel(éis)
+        </MetaChip>
+        {a.subscription?.plan && (
+          <MetaChip icon={<CreditCard className="w-3 h-3" />}>
+            {a.subscription.plan.name}
+          </MetaChip>
+        )}
+        <span className="flex-1" />
+        {isPending && (
+          <Button
+            size="sm"
+            onClick={() => onApprove(a)}
+            disabled={pending}
+            className="shadow-sm shadow-primary/20"
+          >
+            {pending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            )}
+            Aprovar
+          </Button>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="outline" className="h-8 w-8">
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+            {a.status !== "APPROVED" && (
+              <DropdownMenuItem onClick={() => onApprove(a)}>
+                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovar e verificar
+              </DropdownMenuItem>
+            )}
+            {a.status !== "PENDING" && (
+              <DropdownMenuItem onClick={() => onReview(a)}>
+                <RotateCcw className="w-3.5 h-3.5" /> Reavaliar
+              </DropdownMenuItem>
+            )}
+            {a.status !== "BLOCKED" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => onBlock(a)}
+                >
+                  <Ban className="w-3.5 h-3.5" /> Bloquear
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
 function Info({
   icon,
   label,
@@ -336,29 +376,23 @@ function Info({
 }) {
   return (
     <div className="flex items-center gap-1.5 min-w-0">
-      {icon && <span className="text-muted-foreground shrink-0">{icon}</span>}
+      {icon && <span className="text-muted-foreground/70 shrink-0">{icon}</span>}
       <span className="text-muted-foreground shrink-0">{label}:</span>
-      <span className="text-foreground font-medium truncate">{value}</span>
+      <span className="text-foreground/90 font-medium truncate">{value}</span>
     </div>
   );
 }
 
-function Badge({
+function MetaChip({
+  icon,
   children,
-  info,
 }: {
+  icon?: React.ReactNode;
   children: React.ReactNode;
-  info?: boolean;
 }) {
   return (
-    <span
-      className={
-        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium " +
-        (info
-          ? "bg-muted text-muted-foreground border-border"
-          : "bg-primary/10 text-primary border-primary/20")
-      }
-    >
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground/80">
+      {icon && <span className="text-muted-foreground">{icon}</span>}
       {children}
     </span>
   );

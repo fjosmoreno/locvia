@@ -341,19 +341,20 @@ export function PropertyForm({
   return (
     <form onSubmit={submit} className="space-y-5 pb-20">
       {/* Informações */}
-      <Section title="Informações" icon={<Building2 className="w-4 h-4" />}>
+      <Section title="Informações" eyebrow="Passo 1" icon={<Building2 className="w-4 h-4" />}>
         <Field label="Título" error={errors.title} required>
           <Input
             value={form.title}
             onChange={(e) => set("title", e.target.value)}
             placeholder="Ex.: Apartamento 2 quartos no Centro"
+            className="h-9 bg-card/60 border-border/60 focus-visible:border-primary"
           />
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Finalidade" error={errors.purpose} required>
             <Select value={form.purpose} onValueChange={(v) => set("purpose", v)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full h-9 bg-card/60 border-border/60">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -370,7 +371,7 @@ export function PropertyForm({
               value={form.propertyType}
               onValueChange={(v) => set("propertyType", v)}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full h-9 bg-card/60 border-border/60">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -400,6 +401,7 @@ export function PropertyForm({
             value={form.price}
             onChange={(e) => set("price", e.target.value)}
             placeholder="Ex.: 250000 ou 1500"
+            className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
           />
         </Field>
 
@@ -412,6 +414,7 @@ export function PropertyForm({
               value={form.condominium}
               onChange={(e) => set("condominium", e.target.value)}
               placeholder="0"
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
             />
           </Field>
           <Field label="IPTU (R$/ano)">
@@ -422,6 +425,7 @@ export function PropertyForm({
               value={form.iptu}
               onChange={(e) => set("iptu", e.target.value)}
               placeholder="0"
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
             />
           </Field>
         </div>
@@ -440,6 +444,7 @@ export function PropertyForm({
               value={form.area}
               onChange={(e) => set("area", e.target.value)}
               placeholder="0"
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
             />
           </Field>
           {!isCommercial && (
@@ -451,6 +456,7 @@ export function PropertyForm({
                   value={form.bedrooms}
                   onChange={(e) => set("bedrooms", e.target.value)}
                   placeholder="0"
+                  className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
                 />
               </Field>
               <Field label="Banheiros">
@@ -460,6 +466,7 @@ export function PropertyForm({
                   value={form.bathrooms}
                   onChange={(e) => set("bathrooms", e.target.value)}
                   placeholder="0"
+                  className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
                 />
               </Field>
             </>
@@ -473,17 +480,18 @@ export function PropertyForm({
             value={form.parkingSpaces}
             onChange={(e) => set("parkingSpaces", e.target.value)}
             placeholder="0"
+            className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
           />
         </Field>
       </Section>
 
       {/* Localização */}
-      <Section title="Localização" icon={<MapPin className="w-4 h-4" />}>
+      <Section title="Localização" eyebrow="Passo 2" icon={<MapPin className="w-4 h-4" />}>
         <div className="relative">
-          <Label className="text-xs text-muted-foreground">
+          <Label className="eyebrow !text-[10px] text-muted-foreground/80">
             Buscar endereço
           </Label>
-          <div className="relative mt-1">
+          <div className="relative mt-1.5">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={geoQuery}
@@ -493,17 +501,17 @@ export function PropertyForm({
                 blurTimer.current = setTimeout(() => setGeoOpen(false), 180);
               }}
               placeholder="Endereço, bairro ou cidade"
-              className="pl-9 pr-9"
+              className="pl-9 pr-9 h-9 bg-card/60 border-border/60 focus-visible:border-primary"
             />
             {geoLoading && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
             )}
           </div>
           {errors.location && (
-            <p className="text-[11px] text-destructive mt-1">{errors.location}</p>
+            <p className="text-[11px] text-rose-400 mt-1">{errors.location}</p>
           )}
           {geoOpen && geoResults.length > 0 && (
-            <div className="absolute z-50 mt-1 w-full bg-popover border rounded-md shadow-lg max-h-64 overflow-y-auto scroll-area">
+            <div className="absolute z-50 mt-1 w-full bg-popover border border-border/60 rounded-lg shadow-lg max-h-64 overflow-y-auto scroll-area">
               {geoResults.map((r, i) => (
                 <button
                   key={i}
@@ -512,7 +520,7 @@ export function PropertyForm({
                     if (blurTimer.current) clearTimeout(blurTimer.current);
                     pickGeo(r);
                   }}
-                  className="w-full text-left px-3 py-2 hover:bg-accent/60 flex items-start gap-2 border-b last:border-0"
+                  className="w-full text-left px-3 py-2 hover:bg-accent/60 flex items-start gap-2 border-b border-border/40 last:border-0"
                 >
                   <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <div className="min-w-0">
@@ -530,15 +538,15 @@ export function PropertyForm({
         </div>
 
         {form.latitude && form.longitude ? (
-          <div className="flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
-            <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-            <span>
+          <div className="flex items-center gap-2 text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-md px-3 py-2">
+            <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="tabular-nums">
               Lat: {Number(form.latitude).toFixed(5)}, Lng:{" "}
               {Number(form.longitude).toFixed(5)}
             </span>
           </div>
         ) : (
-          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
             Selecione um endereço na busca para definir a localização.
           </p>
         )}
@@ -552,6 +560,7 @@ export function PropertyForm({
               value={form.postalCode}
               onChange={(e) => set("postalCode", e.target.value)}
               placeholder="00000-000"
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
             />
           </Field>
           <Field label="Endereço" className="col-span-2">
@@ -559,6 +568,7 @@ export function PropertyForm({
               value={form.address}
               onChange={(e) => set("address", e.target.value)}
               placeholder="Rua / Avenida"
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary"
             />
           </Field>
         </div>
@@ -567,6 +577,7 @@ export function PropertyForm({
             <Input
               value={form.number}
               onChange={(e) => set("number", e.target.value)}
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary"
             />
           </Field>
           <Field label="Complemento">
@@ -574,6 +585,7 @@ export function PropertyForm({
               value={form.complement}
               onChange={(e) => set("complement", e.target.value)}
               placeholder="Apto, bloco…"
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary"
             />
           </Field>
         </div>
@@ -582,12 +594,14 @@ export function PropertyForm({
             <Input
               value={form.neighborhood}
               onChange={(e) => set("neighborhood", e.target.value)}
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary"
             />
           </Field>
           <Field label="Cidade">
             <Input
               value={form.city}
               onChange={(e) => set("city", e.target.value)}
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary"
             />
           </Field>
         </div>
@@ -597,30 +611,32 @@ export function PropertyForm({
             maxLength={2}
             onChange={(e) => set("state", e.target.value.toUpperCase())}
             placeholder="MG"
+            className="h-9 bg-card/60 border-border/60 focus-visible:border-primary uppercase"
           />
         </Field>
       </Section>
 
       {/* Conteúdo */}
-      <Section title="Conteúdo" icon={<Images className="w-4 h-4" />}>
+      <Section title="Conteúdo" eyebrow="Passo 3" icon={<Images className="w-4 h-4" />}>
         <Field label="Descrição">
           <Textarea
             rows={4}
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
             placeholder="Descreva o imóvel, diferenciais, condições…"
+            className="bg-card/60 border-border/60 focus-visible:border-primary"
           />
         </Field>
 
         <div>
-          <Label className="text-xs text-muted-foreground">
+          <Label className="eyebrow !text-[10px] text-muted-foreground/80">
             Fotos (JPG, PNG ou WebP — máx 8MB cada)
           </Label>
           <div className="mt-2 flex flex-wrap gap-2">
             {form.images.map((url, i) => (
               <div
                 key={i}
-                className="relative w-20 h-20 rounded-md overflow-hidden border bg-muted group"
+                className="relative w-20 h-20 rounded-lg overflow-hidden border bg-muted ring-1 ring-border/40 group"
               >
                 <img
                   src={url}
@@ -628,7 +644,7 @@ export function PropertyForm({
                   className="w-full h-full object-cover"
                 />
                 {i === 0 && (
-                  <span className="absolute top-0.5 left-0.5 bg-primary text-primary-foreground text-[9px] font-semibold px-1.5 py-0.5 rounded">
+                  <span className="absolute top-0.5 left-0.5 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">
                     Capa
                   </span>
                 )}
@@ -664,14 +680,17 @@ export function PropertyForm({
             ))}
             <label
               className={cn(
-                "w-20 h-20 rounded-md border-2 border-dashed grid place-items-center cursor-pointer hover:border-primary hover:bg-accent/40 text-muted-foreground transition-colors",
+                "w-20 h-20 rounded-lg border-2 border-dashed grid place-items-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5 text-muted-foreground",
                 uploading && "opacity-60 pointer-events-none"
               )}
             >
               {uploading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
               ) : (
-                <Upload className="w-4 h-4" />
+                <div className="flex flex-col items-center gap-0.5">
+                  <Upload className="w-4 h-4" />
+                  <span className="text-[9px] font-medium">Enviar</span>
+                </div>
               )}
               <input
                 type="file"
@@ -685,20 +704,20 @@ export function PropertyForm({
               />
             </label>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            A primeira imagem é a foto de capa. Arraste com as setas para
-            reordenar.
+          <p className="text-[11px] text-muted-foreground mt-1.5">
+            A primeira imagem é a foto de capa. Use as setas para reordenar.
           </p>
         </div>
       </Section>
 
       {/* Contato */}
-      <Section title="Contato" icon={<UserRound className="w-4 h-4" />}>
+      <Section title="Contato" eyebrow="Passo 4" icon={<UserRound className="w-4 h-4" />}>
         <Field label="Responsável">
           <Input
             value={form.contactName}
             onChange={(e) => set("contactName", e.target.value)}
             placeholder="Nome de quem atenderá o anúncio"
+            className="h-9 bg-card/60 border-border/60 focus-visible:border-primary"
           />
         </Field>
         <div className="grid grid-cols-2 gap-3">
@@ -707,6 +726,7 @@ export function PropertyForm({
               value={form.whatsapp}
               onChange={(e) => set("whatsapp", e.target.value)}
               placeholder="(31) 9…"
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
             />
           </Field>
           <Field label="Telefone">
@@ -714,18 +734,20 @@ export function PropertyForm({
               value={form.phone}
               onChange={(e) => set("phone", e.target.value)}
               placeholder="(31) 3…"
+              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
             />
           </Field>
         </div>
       </Section>
 
-      <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-background/95 backdrop-blur border-t flex items-center gap-2">
-        <Button type="button" variant="ghost" onClick={onDone}>
+      {/* Sticky footer */}
+      <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-md border-t border-border/60 flex items-center gap-2">
+        <Button type="button" variant="ghost" onClick={onDone} className="hover:bg-muted">
           Cancelar
         </Button>
         <Button
           type="submit"
-          className="ml-auto"
+          className="ml-auto shadow-sm shadow-primary/20"
           disabled={mutation.isPending}
         >
           {mutation.isPending && (
@@ -740,18 +762,31 @@ export function PropertyForm({
 
 function Section({
   title,
+  eyebrow,
   icon,
   children,
 }: {
   title: string;
+  eyebrow?: string;
   icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        {icon && <span className="text-primary">{icon}</span>}
-        {title}
+      <div className="flex items-center gap-2.5">
+        {icon && (
+          <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary grid place-items-center ring-1 ring-primary/25 shrink-0">
+            {icon}
+          </div>
+        )}
+        <div className="min-w-0">
+          {eyebrow && (
+            <div className="eyebrow !text-[10px] text-primary/80">{eyebrow}</div>
+          )}
+          <h3 className="text-sm font-semibold text-foreground tracking-tight">
+            {title}
+          </h3>
+        </div>
       </div>
       <div className="space-y-3">{children}</div>
       <Separator />
@@ -776,15 +811,15 @@ function Field({
 }) {
   return (
     <div className={className}>
-      <Label className="text-xs text-muted-foreground">
+      <Label className="eyebrow !text-[10px] text-muted-foreground/80">
         {label}
         {required && <span className="text-destructive ml-0.5">*</span>}
       </Label>
-      <div className="mt-1">{children}</div>
+      <div className="mt-1.5">{children}</div>
       {hint && !error && (
         <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>
       )}
-      {error && <p className="text-[11px] text-destructive mt-1">{error}</p>}
+      {error && <p className="text-[11px] text-rose-400 mt-1">{error}</p>}
     </div>
   );
 }

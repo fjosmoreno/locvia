@@ -11,6 +11,7 @@ import {
   Loader2,
   Mail,
   Phone,
+  CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ import {
   type UserAdmin,
 } from "@/components/admin/shared";
 import { ROLES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 type RoleFilter = "ALL" | keyof typeof ROLES;
 
@@ -68,6 +70,14 @@ const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: "AGENCY", label: "Imobiliária" },
   { value: "ADMIN", label: "Administrador" },
 ];
+
+const ROLE_AVATAR_COLOR: Record<string, string> = {
+  USER: "from-zinc-500/20 to-zinc-600/20 text-zinc-300 ring-zinc-500/30",
+  OWNER: "from-teal-500/20 to-teal-600/20 text-teal-300 ring-teal-500/30",
+  BROKER: "from-cyan-500/20 to-cyan-600/20 text-cyan-300 ring-cyan-500/30",
+  AGENCY: "from-emerald-500/20 to-emerald-600/20 text-emerald-300 ring-emerald-500/30",
+  ADMIN: "from-primary/25 to-primary/10 text-primary ring-primary/40",
+};
 
 export function UsersTab() {
   const qc = useQueryClient();
@@ -160,12 +170,12 @@ export function UsersTab() {
   return (
     <div className="flex flex-col">
       {/* Filtros */}
-      <div className="p-3 border-b border-border bg-muted/30">
+      <div className="p-3 border-b border-border/60 bg-muted/20">
         <Select
           value={filter}
           onValueChange={(v) => setFilter(v as RoleFilter)}
         >
-          <SelectTrigger className="h-8 w-full sm:w-56 bg-background">
+          <SelectTrigger className="h-9 w-full sm:w-56 bg-background border-border/60">
             <SelectValue placeholder="Filtrar por perfil" />
           </SelectTrigger>
           <SelectContent>
@@ -195,95 +205,18 @@ export function UsersTab() {
       ) : (
         <div className="p-3 space-y-3">
           {data.users.map((u) => (
-            <div
+            <UserCard
               key={u.id}
-              className="rounded-xl border border-border bg-card p-3"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary grid place-items-center shrink-0 font-semibold text-sm">
-                  {(u.name || u.email || "?").charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-foreground truncate">
-                      {u.name || "Sem nome"}
-                    </h3>
-                    <RoleBadge role={u.role} />
-                  </div>
-                  <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
-                    <span className="flex items-center gap-1">
-                      <Mail className="w-3 h-3" /> {u.email}
-                    </span>
-                    {u.phone && (
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3 h-3" /> {u.phone}
-                      </span>
-                    )}
-                    <span>{formatDate(u.createdAt)}</span>
-                  </div>
-                </div>
-                <UserStatusBadge status={u.status} />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 pt-2 mt-2 border-t border-border/60">
-                <Button
-                  size="sm"
-                  variant={u.status === "ACTIVE" ? "outline" : "default"}
-                  onClick={() => toggleStatus(u)}
-                  disabled={updateMutation.isPending || u.role === "ADMIN"}
-                >
-                  {updateMutation.isPending ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : u.status === "ACTIVE" ? (
-                    <Ban className="w-3.5 h-3.5" />
-                  ) : (
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  )}
-                  {u.status === "ACTIVE" ? "Bloquear" : "Ativar"}
-                </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="icon" variant="outline" className="h-8 w-8">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Alterar perfil</DropdownMenuLabel>
-                    {ROLE_OPTIONS.filter((r) => r.value !== u.role).map((r) => (
-                      <DropdownMenuItem
-                        key={r.value}
-                        onClick={() => {
-                          // promover para ADMIN exige confirmação
-                          if (r.value === "ADMIN") {
-                            setPromoteRole("ADMIN");
-                            setAdminTarget(u);
-                          } else if (u.role === "ADMIN") {
-                            setPromoteRole(r.value);
-                            setAdminTarget(u);
-                          } else {
-                            changeRole(u, r.value);
-                          }
-                        }}
-                      >
-                        <Shield className="w-3.5 h-3.5" /> {r.label}
-                      </DropdownMenuItem>
-                    ))}
-                    {u.role !== "ACTIVE" && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setBlockTarget(u)}
-                        >
-                          <Ban className="w-3.5 h-3.5" /> Bloquear acesso
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+              u={u}
+              pending={updateMutation.isPending}
+              onToggleStatus={toggleStatus}
+              onChangeRole={changeRole}
+              onConfirmBlock={(uu) => setBlockTarget(uu)}
+              onConfirmPromote={(uu, role) => {
+                setPromoteRole(role);
+                setAdminTarget(uu);
+              }}
+            />
           ))}
         </div>
       )}
@@ -346,6 +279,120 @@ export function UsersTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function UserCard({
+  u,
+  pending,
+  onToggleStatus,
+  onChangeRole,
+  onConfirmBlock,
+  onConfirmPromote,
+}: {
+  u: UserAdmin;
+  pending: boolean;
+  onToggleStatus: (u: UserAdmin) => void;
+  onChangeRole: (u: UserAdmin, role: string) => void;
+  onConfirmBlock: (u: UserAdmin) => void;
+  onConfirmPromote: (u: UserAdmin, role: string) => void;
+}) {
+  const initial = (u.name || u.email || "?").charAt(0).toUpperCase();
+  const avatarColor = ROLE_AVATAR_COLOR[u.role] ?? ROLE_AVATAR_COLOR.USER;
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm p-3 transition-all duration-200 hover:bg-card hover:border-primary/30 hover:shadow-md">
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "w-11 h-11 rounded-full grid place-items-center shrink-0 font-semibold text-base ring-1 bg-gradient-to-br",
+            avatarColor
+          )}
+        >
+          {initial}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold text-foreground truncate tracking-tight">
+              {u.name || "Sem nome"}
+            </h3>
+            <RoleBadge role={u.role} />
+          </div>
+          <div className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+            <span className="flex items-center gap-1 truncate">
+              <Mail className="w-3 h-3 shrink-0" /> {u.email}
+            </span>
+            {u.phone && (
+              <span className="flex items-center gap-1">
+                <Phone className="w-3 h-3" /> {u.phone}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <CalendarDays className="w-3 h-3" /> {formatDate(u.createdAt)}
+            </span>
+          </div>
+        </div>
+        <UserStatusBadge status={u.status} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 pt-2 mt-2 border-t border-border/40">
+        <Button
+          size="sm"
+          variant={u.status === "ACTIVE" ? "outline" : "default"}
+          onClick={() => onToggleStatus(u)}
+          disabled={pending || u.role === "ADMIN"}
+          className={u.status !== "ACTIVE" ? "shadow-sm shadow-primary/20" : ""}
+        >
+          {pending ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : u.status === "ACTIVE" ? (
+            <Ban className="w-3.5 h-3.5" />
+          ) : (
+            <CheckCircle2 className="w-3.5 h-3.5" />
+          )}
+          {u.status === "ACTIVE" ? "Bloquear" : "Ativar"}
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="outline" className="h-8 w-8">
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Alterar perfil</DropdownMenuLabel>
+            {ROLE_OPTIONS.filter((r) => r.value !== u.role).map((r) => (
+              <DropdownMenuItem
+                key={r.value}
+                onClick={() => {
+                  // promover para ADMIN exige confirmação
+                  if (r.value === "ADMIN") {
+                    onConfirmPromote(u, "ADMIN");
+                  } else if (u.role === "ADMIN") {
+                    onConfirmPromote(u, r.value);
+                  } else {
+                    onChangeRole(u, r.value);
+                  }
+                }}
+              >
+                <Shield className="w-3.5 h-3.5" /> {r.label}
+              </DropdownMenuItem>
+            ))}
+            {u.status !== "BLOCKED" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => onConfirmBlock(u)}
+                >
+                  <Ban className="w-3.5 h-3.5" /> Bloquear acesso
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }

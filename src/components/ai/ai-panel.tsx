@@ -3,8 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Sparkles, Send, X, Loader2, Trash2, MapPin } from "lucide-react";
 import { useUI } from "@/lib/store";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const SUGGESTIONS = [
@@ -31,6 +29,7 @@ export function AiPanel() {
 
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // scroll para baixo ao receber mensagem
   useEffect(() => {
@@ -39,11 +38,18 @@ export function AiPanel() {
     }
   }, [ai.messages, ai.loading]);
 
+  // foca o input ao abrir
+  useEffect(() => {
+    if (ai.open) {
+      const t = setTimeout(() => inputRef.current?.focus(), 220);
+      return () => clearTimeout(t);
+    }
+  }, [ai.open]);
+
   async function ask(text: string) {
     const message = text.trim();
     if (!message || ai.loading) return;
 
-    // adiciona mensagem do usuário
     addAiMessage({ role: "user", content: message, timestamp: Date.now() });
     setInput("");
     setAiLoading(true);
@@ -68,14 +74,20 @@ export function AiPanel() {
       setAiResult({
         reply: data.reply,
         filters: data.filters,
-        propertyIds: (data.properties || []).map((p: any) => p.id),
+        propertyIds: (data.properties || []).map((p: { id: string }) => p.id),
       });
-      // voa para a localização extraída (se IA sugeriu)
       if (data.flyTo) {
         flyTo(data.flyTo.lat, data.flyTo.lng, data.flyTo.zoom || 14);
       }
     } catch {
       setAiError("Não consegui conectar. Tente novamente.");
+    }
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      ask(input);
     }
   }
 
@@ -87,6 +99,7 @@ export function AiPanel() {
           onClick={openAi}
           className="search-area-btn animate-scale-in"
           style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
+          aria-label="Pergunte ao LOCVIA — busca conversacional"
         >
           <Sparkles className="w-3.5 h-3.5" />
           Pergunte ao LOCVIA
@@ -97,45 +110,43 @@ export function AiPanel() {
 
   // Estado aberto — painel conversacional sobre o mapa (não toma a tela)
   return (
-    <div className="absolute left-3 bottom-8 z-[1050] w-[calc(100%-24px)] max-w-sm pointer-events-auto animate-scale-in">
+    <div className="absolute left-3 right-3 sm:right-auto bottom-8 z-[1050] w-[calc(100%-24px)] sm:w-auto sm:max-w-sm pointer-events-auto animate-scale-in">
       <div
-        className="rounded-2xl border border-border overflow-hidden flex flex-col"
-        style={{
-          background: "rgba(11, 17, 32, 0.92)",
-          backdropFilter: "blur(16px)",
-          boxShadow: "var(--shadow-xl), var(--glow-primary)",
-          maxHeight: "min(70vh, 520px)",
-        }}
+        className="overlay-panel flex flex-col"
+        style={{ maxHeight: "min(70vh, 560px)" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
+        <div className="overlay-panel-header">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div
-              className="w-7 h-7 rounded-lg grid place-items-center"
+              className="overlay-panel-icon"
               style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
             >
               <Sparkles className="w-3.5 h-3.5" />
             </div>
-            <div>
-              <div className="text-sm font-semibold text-foreground">Pergunte ao LOCVIA</div>
-              <div className="text-[10px] text-muted-foreground -mt-0.5">
-                {ai.highlightedIds ? `${ai.highlightedIds.length} imóveis destacados` : "busca conversacional"}
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-foreground truncate">Pergunte ao LOCVIA</div>
+              <div className="text-[10px] text-muted-foreground -mt-0.5 truncate">
+                {ai.highlightedIds
+                  ? `${ai.highlightedIds.length} imóveis destacados`
+                  : "busca conversacional"}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {ai.highlightedIds && (
               <button
                 onClick={clearAi}
-                className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-secondary transition-colors flex items-center gap-1"
+                className="overlay-panel-close"
                 title="Limpar busca da IA"
+                aria-label="Limpar busca da IA"
               >
-                <Trash2 className="w-3 h-3" /> Limpar
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
             <button
               onClick={closeAi}
-              className="w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              className="overlay-panel-close"
               aria-label="Fechar"
             >
               <X className="w-4 h-4" />
@@ -146,21 +157,21 @@ export function AiPanel() {
         {/* Mensagens */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto scroll-area px-4 py-3 space-y-3 min-h-[120px]"
+          className="overlay-scroll flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[140px]"
         >
           {ai.messages.length === 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Descreva o imóvel que procura em linguagem natural. Exemplos:
+            <div className="space-y-2.5">
+              <p className="text-xs text-muted-foreground px-1 leading-relaxed">
+                Descreva o imóvel que procura em linguagem natural — eu encontro no mapa.
               </p>
               <div className="space-y-1.5">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
                     onClick={() => ask(s)}
-                    className="block w-full text-left text-xs px-3 py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground/90 transition-colors border border-border"
+                    className="suggestion-pill"
                   >
-                    {s}
+                    <span>{s}</span>
                   </button>
                 ))}
               </div>
@@ -177,10 +188,8 @@ export function AiPanel() {
             >
               <div
                 className={cn(
-                  "max-w-[85%] px-3 py-2 rounded-2xl text-sm",
-                  m.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-md"
-                    : "bg-secondary text-foreground rounded-bl-md"
+                  "chat-bubble",
+                  m.role === "user" ? "is-user" : "is-assistant"
                 )}
               >
                 {m.content}
@@ -196,7 +205,7 @@ export function AiPanel() {
 
           {ai.loading && (
             <div className="flex justify-start">
-              <div className="bg-secondary text-foreground rounded-2xl rounded-bl-md px-3 py-2 flex items-center gap-2 text-sm">
+              <div className="chat-bubble is-assistant flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                 procurando imóveis…
               </div>
@@ -204,13 +213,13 @@ export function AiPanel() {
           )}
 
           {ai.error && (
-            <div className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+            <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-3 py-2">
               {ai.error}
             </div>
           )}
         </div>
 
-        {/* Input */}
+        {/* Input — 44px touch target */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -218,26 +227,37 @@ export function AiPanel() {
           }}
           className="p-3 border-t border-border flex items-center gap-2"
         >
-          <Input
+          <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
             placeholder="Descreva o imóvel que procura…"
             disabled={ai.loading}
-            className="bg-secondary border-border text-sm h-10"
-            autoFocus
+            aria-label="Pergunte ao LOCVIA"
+            className={cn(
+              "glass-input flex-1 h-11 px-4 rounded-full text-sm outline-none",
+              "placeholder:text-muted-foreground/70"
+            )}
           />
-          <Button
+          <button
             type="submit"
-            size="icon"
             disabled={ai.loading || !input.trim()}
-            className="h-10 w-10 shrink-0"
+            aria-label="Enviar pergunta"
+            className={cn(
+              "w-11 h-11 grid place-items-center rounded-full shrink-0 transition-all",
+              "bg-primary text-primary-foreground shadow-md",
+              "disabled:opacity-40 disabled:cursor-not-allowed",
+              "hover:brightness-110 active:scale-94",
+              !ai.loading && input.trim() && "shadow-[0_0_0_3px_rgba(0,212,255,0.18),0_0_22px_rgba(0,212,255,0.28)]"
+            )}
           >
             {ai.loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Send className="w-4 h-4" />
             )}
-          </Button>
+          </button>
         </form>
       </div>
     </div>

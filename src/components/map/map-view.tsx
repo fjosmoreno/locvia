@@ -16,22 +16,56 @@ import type { Property } from "@/lib/types";
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || "";
 
 /**
- * Estilo do mapa — estratégia com fallback:
- * 1. MapTiler "basic" (estilo claro premium da imagem de referência) se a chave funcionar
- * 2. Fallback: CARTO Voyager (vector tiles, claro, ruas coloridas — estilo similar, grátis)
+ * Estilo do mapa — estratégia DARK premium coesa com o app LOCVIA:
+ * 1. MapTiler "basic" (vector tiles premium) se a chave funcionar
+ * 2. Fallback: estilo raster CARTO dark_all (sempre funciona, alta compatibilidade)
  *
- * Para ativar o MapTiler premium, configure a chave no painel MapTiler permitindo:
- * - Domain: localhost, locvia.vercel.app (e seu domínio de produção)
- * - APIs: Vector Tiles, Styles
+ * Raster tiles são mais compatíveis que vector tiles (funcionam mesmo em
+ * headless Chromium com WebGL limitado). Visual DARK coeso com o navy do app,
+ * faz o ciano (#00D4FF) e os marcadores brancos saltarem — padrão Apple/Stripe.
  */
 const MAPTILER_STYLE = `https://api.maptiler.com/maps/basic/style.json?key=${MAPTILER_KEY}`;
-const FALLBACK_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-// Detecta se a chave MapTiler funciona (cacheado após primeira tentativa)
+// Estilo raster DARK premium (CARTO dark_all) — sempre renderiza
+const FALLBACK_STYLE = {
+  version: 8 as const,
+  name: "LOCVIA Dark",
+  sources: {
+    "osm-tiles": {
+      type: "raster" as const,
+      tiles: [
+        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      ],
+      tileSize: 256,
+      attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contribuidores",
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: "osm-tiles",
+      type: "raster" as const,
+      source: "osm-tiles",
+      minzoom: 0,
+      maxzoom: 22,
+      paint: {
+        // Leve ajuste para coesão com o navy do app — dim sutil + contraste
+        "raster-saturation": -0.08,
+        "raster-contrast": 0.08,
+        "raster-brightness-min": 0.0,
+        "raster-brightness-max": 0.96,
+        "raster-opacity": 0.96,
+      },
+    },
+  ],
+};
+
 let maptilerChecked = false;
 let maptilerOk = false;
 
-async function getMapStyle(): Promise<string> {
+async function getMapStyle(): Promise<any> {
   if (!MAPTILER_KEY) return FALLBACK_STYLE;
   if (maptilerChecked) return maptilerOk ? MAPTILER_STYLE : FALLBACK_STYLE;
   try {
@@ -39,10 +73,8 @@ async function getMapStyle(): Promise<string> {
     if (!res.ok) {
       maptilerOk = false;
       maptilerChecked = true;
-      console.warn("[LOCVIA] MapTiler key rejected (403). Usando fallback CARTO Voyager. Configure o domínio no painel MapTiler.");
       return FALLBACK_STYLE;
     }
-    // Valida que a resposta é um style.json válido (tem version)
     const data = await res.json();
     if (!data || typeof data.version !== "number") {
       maptilerOk = false;
@@ -203,8 +235,8 @@ export default function MapView() {
 
   const { clusters, updateClusters, expandCluster } = useCluster(properties);
 
-  // Carrega o estilo do mapa (com fallback MapTiler → CARTO Voyager)
-  const [mapStyle, setMapStyle] = useState<string>(FALLBACK_STYLE);
+  // Carrega o estilo do mapa (com fallback MapTiler → raster CARTO Voyager)
+  const [mapStyle, setMapStyle] = useState<any>(FALLBACK_STYLE);
   useEffect(() => {
     let mounted = true;
     getMapStyle().then((s) => {
@@ -369,7 +401,15 @@ export default function MapView() {
               >
                 <Layer
                   type="fill"
-                  paint={{ "fill-color": "#00D4FF", "fill-opacity": 0.08 }}
+                  paint={{ "fill-color": "#00D4FF", "fill-opacity": 0.10 }}
+                />
+                <Layer
+                  type="line"
+                  paint={{
+                    "line-color": "#00D4FF",
+                    "line-width": 1,
+                    "line-opacity": 0.35,
+                  }}
                 />
               </Source>
             )}
@@ -389,6 +429,11 @@ export default function MapView() {
 
         <RouteLayer />
       </Map>
+      {/* Vignette premium sobre o canvas — profundidade, coesão com o navy do app.
+          pointer-events: none para não bloquear a interação com o mapa. */}
+      <div className="map-vignette" aria-hidden />
+      {/* Grain texture — micro ruído para acabamento físico/matte premium */}
+      <div className="map-grain" aria-hidden />
     </div>
   );
 }
@@ -446,13 +491,13 @@ function RouteLayer() {
 
 const originMarkerStyle: React.CSSProperties = {
   width: 14, height: 14, borderRadius: 999,
-  background: "#00D4FF", border: "3px solid #fff",
-  boxShadow: "0 0 0 4px rgba(0,212,255,.25), 0 2px 6px rgba(0,0,0,.4)",
+  background: "#00D4FF", border: "2.5px solid #fff",
+  boxShadow: "0 0 0 4px rgba(0,212,255,.30), 0 2px 6px rgba(0,0,0,.5), 0 0 14px rgba(0,212,255,.55)",
 };
 const destMarkerStyle: React.CSSProperties = {
   width: 14, height: 14, borderRadius: 3,
-  background: "#ef4444", border: "3px solid #fff",
-  boxShadow: "0 0 0 4px rgba(239,68,68,.25), 0 2px 6px rgba(0,0,0,.4)",
+  background: "#ef4444", border: "2.5px solid #fff",
+  boxShadow: "0 0 0 4px rgba(239,68,68,.30), 0 2px 6px rgba(0,0,0,.5), 0 0 14px rgba(239,68,68,.45)",
 };
 
 /** Coordenadas de um círculo (precisão GPS). */

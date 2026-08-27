@@ -4,6 +4,7 @@ import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ============================================================
@@ -65,6 +66,8 @@ export interface PropertyAdmin {
   images: { url: string; isPrimary: boolean }[];
   agency: { name: string } | null;
   owner: { user: { name: string } } | null;
+  featured?: boolean;
+  badge?: string | null;
 }
 
 export interface UserAdmin {
@@ -101,13 +104,13 @@ export interface ReportAdmin {
 }
 
 // ============================================================
-// Status badges
+// Status badges — tons dark-friendly (translúcidos sobre navy)
 // ============================================================
 
 const AGENCY_STATUS_STYLE: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-800 border-amber-200",
-  APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  BLOCKED: "bg-rose-100 text-rose-800 border-rose-200",
+  PENDING: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  APPROVED: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  BLOCKED: "bg-rose-500/15 text-rose-300 border-rose-500/30",
 };
 
 const AGENCY_STATUS_LABEL: Record<string, string> = {
@@ -116,20 +119,37 @@ const AGENCY_STATUS_LABEL: Record<string, string> = {
   BLOCKED: "Bloqueada",
 };
 
+const AGENCY_STATUS_DOT: Record<string, string> = {
+  PENDING: "bg-amber-400",
+  APPROVED: "bg-emerald-400",
+  BLOCKED: "bg-rose-400",
+};
+
 const PROPERTY_STATUS_STYLE: Record<string, string> = {
-  DRAFT: "bg-zinc-100 text-zinc-700 border-zinc-200",
-  PENDING_APPROVAL: "bg-amber-100 text-amber-800 border-amber-200",
-  ACTIVE: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  PAUSED: "bg-zinc-100 text-zinc-700 border-zinc-200",
-  RENTED: "bg-teal-100 text-teal-800 border-teal-200",
-  SOLD: "bg-teal-100 text-teal-800 border-teal-200",
-  EXPIRED: "bg-zinc-100 text-zinc-500 border-zinc-200",
-  REJECTED: "bg-rose-100 text-rose-800 border-rose-200",
+  DRAFT: "bg-zinc-500/15 text-zinc-300 border-zinc-500/25",
+  PENDING_APPROVAL: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  ACTIVE: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  PAUSED: "bg-zinc-500/15 text-zinc-300 border-zinc-500/25",
+  RENTED: "bg-teal-500/15 text-teal-300 border-teal-500/30",
+  SOLD: "bg-teal-500/15 text-teal-300 border-teal-500/30",
+  EXPIRED: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  REJECTED: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+};
+
+const PROPERTY_STATUS_DOT: Record<string, string> = {
+  DRAFT: "bg-zinc-400",
+  PENDING_APPROVAL: "bg-amber-400",
+  ACTIVE: "bg-emerald-400",
+  PAUSED: "bg-zinc-400",
+  RENTED: "bg-teal-400",
+  SOLD: "bg-teal-400",
+  EXPIRED: "bg-zinc-500",
+  REJECTED: "bg-rose-400",
 };
 
 const USER_STATUS_STYLE: Record<string, string> = {
-  ACTIVE: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  BLOCKED: "bg-rose-100 text-rose-800 border-rose-200",
+  ACTIVE: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  BLOCKED: "bg-rose-500/15 text-rose-300 border-rose-500/30",
 };
 
 const USER_STATUS_LABEL: Record<string, string> = {
@@ -138,18 +158,18 @@ const USER_STATUS_LABEL: Record<string, string> = {
 };
 
 const ROLE_STYLE: Record<string, string> = {
-  USER: "bg-zinc-100 text-zinc-700 border-zinc-200",
-  OWNER: "bg-teal-100 text-teal-800 border-teal-200",
-  BROKER: "bg-cyan-100 text-cyan-800 border-cyan-200",
-  AGENCY: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  ADMIN: "bg-primary text-primary-foreground border-transparent",
+  USER: "bg-zinc-500/15 text-zinc-300 border-zinc-500/25",
+  OWNER: "bg-teal-500/15 text-teal-300 border-teal-500/30",
+  BROKER: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+  AGENCY: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  ADMIN: "bg-primary/20 text-primary border-primary/40",
 };
 
 const REPORT_STATUS_STYLE: Record<string, string> = {
-  OPEN: "bg-amber-100 text-amber-800 border-amber-200",
-  REVIEWING: "bg-violet-100 text-violet-800 border-violet-200",
-  RESOLVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  DISMISSED: "bg-zinc-100 text-zinc-500 border-zinc-200",
+  OPEN: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  REVIEWING: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+  RESOLVED: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  DISMISSED: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
 };
 
 const REPORT_STATUS_LABEL: Record<string, string> = {
@@ -159,27 +179,52 @@ const REPORT_STATUS_LABEL: Record<string, string> = {
   DISMISSED: "Dispensada",
 };
 
+function withDot(className: string, dotClass?: string) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {dotClass && (
+        <span className={cn("w-1.5 h-1.5 rounded-full", dotClass)} />
+      )}
+    </span>
+  );
+}
+
 export function AgencyStatusBadge({ status }: { status: string }) {
   return (
     <Badge
       variant="outline"
-      className={cn(AGENCY_STATUS_STYLE[status] ?? AGENCY_STATUS_STYLE.PENDING)}
+      className={cn(
+        "gap-1.5 font-medium",
+        AGENCY_STATUS_STYLE[status] ?? AGENCY_STATUS_STYLE.PENDING
+      )}
     >
+      <span
+        className={cn(
+          "w-1.5 h-1.5 rounded-full",
+          AGENCY_STATUS_DOT[status] ?? AGENCY_STATUS_DOT.PENDING
+        )}
+      />
       {AGENCY_STATUS_LABEL[status] ?? status}
     </Badge>
   );
 }
 
 export function PropertyStatusBadge({ status }: { status: string }) {
-  // importa label do constants para evitar duplicar
   const label = PROPERTY_STATUS_LABEL_LOOKUP[status] ?? status;
   return (
     <Badge
       variant="outline"
       className={cn(
+        "gap-1.5 font-medium",
         PROPERTY_STATUS_STYLE[status] ?? PROPERTY_STATUS_STYLE.DRAFT
       )}
     >
+      <span
+        className={cn(
+          "w-1.5 h-1.5 rounded-full",
+          PROPERTY_STATUS_DOT[status] ?? PROPERTY_STATUS_DOT.DRAFT
+        )}
+      />
       {label}
     </Badge>
   );
@@ -188,7 +233,7 @@ export function PropertyStatusBadge({ status }: { status: string }) {
 // lookup local (espelha PROPERTY_STATUS_LABELS de constants)
 const PROPERTY_STATUS_LABEL_LOOKUP: Record<string, string> = {
   DRAFT: "Rascunho",
-  PENDING_APPROVAL: "Aguardando aprovação",
+  PENDING_APPROVAL: "Aguardando",
   ACTIVE: "Ativo",
   PAUSED: "Pausado",
   RENTED: "Alugado",
@@ -201,20 +246,18 @@ export function UserStatusBadge({ status }: { status: string }) {
   return (
     <Badge
       variant="outline"
-      className={cn(USER_STATUS_STYLE[status] ?? USER_STATUS_STYLE.ACTIVE)}
+      className={cn(
+        "gap-1.5 font-medium",
+        USER_STATUS_STYLE[status] ?? USER_STATUS_STYLE.ACTIVE
+      )}
     >
+      <span
+        className={cn(
+          "w-1.5 h-1.5 rounded-full",
+          status === "BLOCKED" ? "bg-rose-400" : "bg-emerald-400"
+        )}
+      />
       {USER_STATUS_LABEL[status] ?? status}
-    </Badge>
-  );
-}
-
-export function RoleBadge({ role }: { role: string }) {
-  return (
-    <Badge
-      variant="outline"
-      className={cn(ROLE_STYLE[role] ?? ROLE_STYLE.USER)}
-    >
-      {ROLE_LABEL_LOOKUP[role] ?? role}
     </Badge>
   );
 }
@@ -227,21 +270,48 @@ const ROLE_LABEL_LOOKUP: Record<string, string> = {
   ADMIN: "Administrador",
 };
 
+export function RoleBadge({ role }: { role: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "font-medium",
+        ROLE_STYLE[role] ?? ROLE_STYLE.USER
+      )}
+    >
+      {ROLE_LABEL_LOOKUP[role] ?? role}
+    </Badge>
+  );
+}
+
 export function ReportStatusBadge({ status }: { status: string }) {
   return (
     <Badge
       variant="outline"
       className={cn(
+        "gap-1.5 font-medium",
         REPORT_STATUS_STYLE[status] ?? REPORT_STATUS_STYLE.OPEN
       )}
     >
+      <span
+        className={cn(
+          "w-1.5 h-1.5 rounded-full",
+          status === "OPEN"
+            ? "bg-amber-400"
+            : status === "REVIEWING"
+            ? "bg-violet-400"
+            : status === "RESOLVED"
+            ? "bg-emerald-400"
+            : "bg-zinc-500"
+        )}
+      />
       {REPORT_STATUS_LABEL[status] ?? status}
     </Badge>
   );
 }
 
 // ============================================================
-// KPI card
+// KPI card — glass dark + hover lift + trend indicator
 // ============================================================
 
 export function KpiCard({
@@ -250,38 +320,68 @@ export function KpiCard({
   icon,
   hint,
   hintTone = "default",
+  trend,
+  trendLabel,
 }: {
   label: string;
   value: React.ReactNode;
   icon?: React.ReactNode;
   hint?: React.ReactNode;
   hintTone?: "default" | "warn" | "success";
+  trend?: "up" | "down" | "flat";
+  trendLabel?: React.ReactNode;
 }) {
   return (
-    <Card className="p-4 gap-2 shadow-none">
-      <div className="flex items-start justify-between gap-2">
-        <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+    <Card className="group relative overflow-hidden p-4 gap-0 shadow-none border-border/60 bg-card/60 backdrop-blur-sm transition-all duration-200 hover:border-primary/40 hover:bg-card hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5">
+      {/* Glow accent */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-8 w-24 h-24 rounded-full bg-primary/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+      />
+      <div className="flex items-start justify-between gap-2 relative">
+        <div className="eyebrow !text-[10.5px] text-muted-foreground/80">
           {label}
         </div>
         {icon && (
-          <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary grid place-items-center">
+          <div className="w-8 h-8 rounded-lg bg-primary/12 text-primary grid place-items-center ring-1 ring-primary/20 shadow-sm shadow-primary/10">
             {icon}
           </div>
         )}
       </div>
-      <div className="text-2xl font-bold text-foreground leading-tight">
+      <div className="mt-2.5 text-[1.65rem] font-semibold text-foreground leading-none tracking-tight price tabular-nums">
         {value}
       </div>
-      {hint && (
-        <div
-          className={cn(
-            "text-[11px] font-medium",
-            hintTone === "warn" && "text-amber-700",
-            hintTone === "success" && "text-emerald-700",
-            hintTone === "default" && "text-muted-foreground"
+      {(hint || trend) && (
+        <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium flex-wrap">
+          {trend === "up" && (
+            <span className="inline-flex items-center gap-0.5 text-emerald-400">
+              <ArrowUpRight className="w-3 h-3" />
+              {trendLabel}
+            </span>
           )}
-        >
-          {hint}
+          {trend === "down" && (
+            <span className="inline-flex items-center gap-0.5 text-rose-400">
+              <ArrowDownRight className="w-3 h-3" />
+              {trendLabel}
+            </span>
+          )}
+          {trend === "flat" && (
+            <span className="inline-flex items-center gap-0.5 text-muted-foreground">
+              <Minus className="w-3 h-3" />
+              {trendLabel}
+            </span>
+          )}
+          {hint && (
+            <span
+              className={cn(
+                hintTone === "warn" && "text-amber-400",
+                hintTone === "success" && "text-emerald-400",
+                hintTone === "default" && "text-muted-foreground"
+              )}
+            >
+              {hint}
+            </span>
+          )}
         </div>
       )}
     </Card>
@@ -289,7 +389,7 @@ export function KpiCard({
 }
 
 // ============================================================
-// Empty + error states
+// Empty + error states — premium
 // ============================================================
 
 export function EmptyState({
@@ -304,19 +404,25 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-14 px-6">
+    <div className="flex flex-col items-center justify-center text-center py-16 px-6 animate-fade-in">
       {icon && (
-        <div className="w-14 h-14 rounded-2xl bg-muted grid place-items-center text-muted-foreground mb-4">
-          {icon}
+        <div className="relative mb-5">
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-primary/15 blur-2xl rounded-full"
+          />
+          <div className="relative w-16 h-16 rounded-2xl bg-card border border-border/60 grid place-items-center text-muted-foreground shadow-sm">
+            {icon}
+          </div>
         </div>
       )}
-      <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
+      <h3 className="text-sm font-semibold text-foreground mb-1.5">{title}</h3>
       {description && (
-        <p className="text-xs text-muted-foreground max-w-[300px]">
+        <p className="text-xs text-muted-foreground max-w-[320px] leading-relaxed">
           {description}
         </p>
       )}
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }
@@ -329,18 +435,26 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-14 px-6">
-      <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 grid place-items-center mb-4 text-2xl">
-        !
+    <div className="flex flex-col items-center justify-center text-center py-16 px-6 animate-fade-in">
+      <div className="relative mb-5">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-rose-500/15 blur-2xl rounded-full"
+        />
+        <div className="relative w-16 h-16 rounded-2xl bg-card border border-rose-500/30 grid place-items-center text-rose-400 shadow-sm">
+          <span className="text-2xl font-bold">!</span>
+        </div>
       </div>
-      <h3 className="text-sm font-semibold text-foreground mb-1">
+      <h3 className="text-sm font-semibold text-foreground mb-1.5">
         Falha ao carregar
       </h3>
-      <p className="text-xs text-muted-foreground max-w-[300px]">{message}</p>
+      <p className="text-xs text-muted-foreground max-w-[320px] leading-relaxed">
+        {message}
+      </p>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-4 text-xs font-medium text-primary hover:underline"
+          className="mt-5 text-xs font-semibold text-primary hover:underline underline-offset-4"
         >
           Tentar novamente
         </button>
@@ -350,7 +464,7 @@ export function ErrorState({
 }
 
 // ============================================================
-// Loading skeletons
+// Loading skeletons — shimmer premium
 // ============================================================
 
 export function ListSkeleton({ rows = 4 }: { rows?: number }) {
@@ -359,14 +473,14 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+          className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3"
         >
-          <Skeleton className="h-12 w-12 rounded-lg shrink-0" />
+          <div className="h-12 w-12 rounded-lg shrink-0 skeleton-premium" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-1/2" />
-            <Skeleton className="h-3 w-3/4" />
+            <div className="h-3 w-1/2 rounded skeleton-premium" />
+            <div className="h-3 w-3/4 rounded skeleton-premium" />
           </div>
-          <Skeleton className="h-7 w-16 rounded-md" />
+          <div className="h-7 w-16 rounded-md skeleton-premium" />
         </div>
       ))}
     </div>
@@ -375,11 +489,14 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
 
 export function KpiGridSkeleton() {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 p-4">
-      {Array.from({ length: 9 }).map((_, i) => (
-        <Card key={i} className="p-4 gap-2 shadow-none">
-          <Skeleton className="h-3 w-1/2" />
-          <Skeleton className="h-7 w-2/3" />
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <Card
+          key={i}
+          className="p-4 gap-2 shadow-none border-border/60 bg-card/60"
+        >
+          <div className="h-3 w-1/2 rounded skeleton-premium" />
+          <div className="h-7 w-2/3 rounded skeleton-premium mt-2" />
         </Card>
       ))}
     </div>
@@ -398,3 +515,5 @@ export function formatDate(date: string | Date): string {
     year: "numeric",
   });
 }
+
+export { withDot };

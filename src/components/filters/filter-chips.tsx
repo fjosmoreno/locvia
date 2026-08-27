@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import {
   Home, Building2, Store, DoorOpen, SlidersHorizontal, X, Check,
 } from "lucide-react";
@@ -7,10 +8,8 @@ import { useUI } from "@/lib/store";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Toggle } from "@/components/ui/toggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { DISTANCE_OPTIONS, PROPERTY_TYPES, PROPERTY_TYPE_LABELS, PURPOSES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +25,27 @@ export function FilterChips() {
   const {
     filters, setFilters, resetFilters, openDrawer, userLocation,
   } = useUI();
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  // detecta overflow horizontal para mostrar fade indicator
+  useEffect(() => {
+    function check() {
+      const el = scrollRef.current;
+      if (!el) return;
+      setHasOverflow(el.scrollWidth > el.clientWidth + 4);
+    }
+    check();
+    window.addEventListener("resize", check);
+    // observa mudanças nos filtros (número de chips muda)
+    const mo = new MutationObserver(check);
+    if (scrollRef.current) mo.observe(scrollRef.current, { childList: true, subtree: true });
+    return () => {
+      window.removeEventListener("resize", check);
+      mo.disconnect();
+    };
+  }, [filters]);
 
   const activeCount =
     filters.propertyTypes.length +
@@ -47,7 +67,13 @@ export function FilterChips() {
 
   return (
     <div className="absolute top-[64px] sm:top-[72px] left-3 right-3 z-[1050] pointer-events-none">
-      <div className="pointer-events-auto flex items-center gap-2 overflow-x-auto scroll-x pb-1">
+      <div
+        ref={scrollRef}
+        className={cn(
+          "chip-scroll-wrap pointer-events-auto flex items-center gap-2 overflow-x-auto scroll-x pb-1.5 pr-7",
+          hasOverflow && "has-overflow"
+        )}
+      >
         {/* Finalidade */}
         <button
           onClick={() => togglePurpose(PURPOSES.RENT)}
@@ -81,7 +107,7 @@ export function FilterChips() {
                     key={t}
                     onClick={() => toggleType(t)}
                     className={cn(
-                      "flex items-center gap-2 h-10 px-3 rounded-xl border text-sm transition-all",
+                      "flex items-center gap-2 h-11 px-3 rounded-xl border text-sm transition-all",
                       active
                         ? "border-primary bg-accent text-accent-foreground font-medium"
                         : "border-border bg-background hover:bg-accent/50"
@@ -156,7 +182,7 @@ export function FilterChips() {
                   key={n}
                   onClick={() => setFilters({ bedrooms: filters.bedrooms === n ? undefined : n })}
                   className={cn(
-                    "w-10 h-10 rounded-xl text-sm font-semibold transition-all",
+                    "w-11 h-11 rounded-xl text-sm font-semibold transition-all",
                     filters.bedrooms === n
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted hover:bg-accent text-foreground"
@@ -205,18 +231,18 @@ export function FilterChips() {
         {/* Mais filtros (sheet avançado) */}
         <button
           onClick={() => openDrawer("filters")}
-          className="filter-chip shrink-0"
+          className={cn("filter-chip shrink-0", activeCount > 0 && "is-active")}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
           Mais
           {activeCount > 0 && <span className="chip-count">{activeCount}</span>}
         </button>
 
-        {/* Limpar */}
+        {/* Limpar — destructive */}
         {(activeCount > 0 || filters.purpose) && (
           <button
             onClick={resetFilters}
-            className="filter-chip shrink-0 text-muted-foreground hover:text-destructive"
+            className="filter-chip is-destructive shrink-0"
             aria-label="Limpar filtros"
           >
             <X className="w-3.5 h-3.5" />

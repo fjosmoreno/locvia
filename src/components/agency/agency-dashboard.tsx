@@ -8,6 +8,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -25,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -79,6 +81,7 @@ import {
   Globe,
   Instagram,
   Save,
+  CalendarDays,
 } from "lucide-react";
 import {
   PROPERTY_TYPE_LABELS,
@@ -172,6 +175,14 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
 };
 
+const ROLE_AVATAR_COLOR: Record<string, string> = {
+  USER: "from-zinc-500/20 to-zinc-600/20 text-zinc-300 ring-zinc-500/30",
+  OWNER: "from-teal-500/20 to-teal-600/20 text-teal-300 ring-teal-500/30",
+  BROKER: "from-cyan-500/20 to-cyan-600/20 text-cyan-300 ring-cyan-500/30",
+  AGENCY: "from-emerald-500/20 to-emerald-600/20 text-emerald-300 ring-emerald-500/30",
+  ADMIN: "from-primary/25 to-primary/10 text-primary ring-primary/40",
+};
+
 const TABS = [
   { value: "overview", label: "Visão geral", icon: LayoutDashboard },
   { value: "properties", label: "Meus imóveis", icon: Building2 },
@@ -251,7 +262,6 @@ export function AgencyDashboard() {
   const isAdvertiser = ADVERTISER_ROLES.includes(role);
   const agency = meQuery.data?.agency ?? null;
   const subscription = plansQuery.data?.subscription ?? null;
-  const planCode = subscription?.planCode ?? null;
   const isAgencyPending =
     role === ROLES.AGENCY && agency && agency.status !== "APPROVED";
 
@@ -259,37 +269,45 @@ export function AgencyDashboard() {
     <Sheet open={open} onOpenChange={(o) => !o && closeDrawer()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-2xl p-0 flex flex-col"
+        className="w-full sm:max-w-2xl p-0 flex flex-col border-l-border/60 bg-background"
       >
         {/* Header */}
-        <SheetHeader className="px-4 py-3.5 border-b flex-row items-center justify-between space-y-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+        <SheetHeader className="px-4 py-4 border-b border-border/60 flex-row items-center justify-between space-y-0 relative overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-transparent"
+          />
+          <div className="flex items-center gap-3 min-w-0 relative">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary grid place-items-center shrink-0 ring-1 ring-primary/25 shadow-sm shadow-primary/10">
               <Building2 className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <SheetTitle className="text-base leading-tight truncate">
+              <SheetTitle className="text-base leading-tight tracking-tight truncate">
                 Painel do anunciante
               </SheetTitle>
-              {session?.user && (
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[11px] text-muted-foreground truncate max-w-[160px]">
-                    {session.user.name}
+              <SheetDescription className="text-xs">
+                {session?.user ? (
+                  <span className="flex items-center gap-1.5 mt-0.5">
+                    <span className="truncate max-w-[160px]">
+                      {session.user.name}
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] h-4 px-1.5 font-medium"
+                    >
+                      {ROLE_LABELS[role] || role}
+                    </Badge>
                   </span>
-                  <Badge
-                    variant="secondary"
-                    className="text-[10px] h-4 px-1.5 font-medium"
-                  >
-                    {ROLE_LABELS[role] || role}
-                  </Badge>
-                </div>
-              )}
+                ) : (
+                  "LOCVIA"
+                )}
+              </SheetDescription>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="h-8 w-8 shrink-0 relative rounded-lg hover:bg-muted"
             onClick={closeDrawer}
             aria-label="Fechar"
           >
@@ -301,7 +319,12 @@ export function AgencyDashboard() {
         <div className="flex-1 overflow-hidden flex flex-col">
           {status === "loading" ? (
             <div className="flex-1 grid place-items-center">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="text-xs text-muted-foreground">
+                  Carregando painel…
+                </span>
+              </div>
             </div>
           ) : !session ? (
             <NotLoggedIn
@@ -320,33 +343,38 @@ export function AgencyDashboard() {
           ) : !meQuery.data || plansQuery.isLoading ? (
             <DashboardSkeleton />
           ) : meQuery.isError ? (
-            <ErrorState message="Não foi possível carregar seus dados." onRetry={() => meQuery.refetch()} />
+            <ErrorStateInline
+              message="Não foi possível carregar seus dados."
+              onRetry={() => meQuery.refetch()}
+            />
           ) : (
             <Tabs
               value={tab}
               onValueChange={(v) => setTab(v as TabValue)}
               className="flex-1 flex flex-col overflow-hidden"
             >
-              <div className="border-b px-2 py-2 overflow-x-auto scroll-area">
-                <TabsList className="bg-transparent h-auto p-0 gap-1 flex w-max">
-                  {TABS.map((t) => {
-                    const Icon = t.icon;
-                    return (
-                      <TabsTrigger
-                        key={t.value}
-                        value={t.value}
-                        className="flex-none gap-1.5 h-8 px-3 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                        {t.label}
-                      </TabsTrigger>
-                    );
-                  })}
-                </TabsList>
+              <div className="border-b border-border/60 bg-background/95 backdrop-blur-md sticky top-0 z-10">
+                <ScrollArea className="w-full">
+                  <TabsList className="bg-transparent h-auto p-0 gap-0 flex w-max rounded-none">
+                    {TABS.map((t) => {
+                      const Icon = t.icon;
+                      return (
+                        <TabsTrigger
+                          key={t.value}
+                          value={t.value}
+                          className="flex-none gap-1.5 h-11 px-3.5 text-xs font-medium text-muted-foreground rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none hover:text-foreground hover:bg-muted/40 transition-colors"
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          {t.label}
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </ScrollArea>
               </div>
 
               <div className="flex-1 overflow-y-auto scroll-area">
-                <TabsContent value="overview" className="p-4 m-0 mt-0">
+                <TabsContent value="overview" className="p-4 m-0 mt-0 animate-fade-in">
                   <OverviewTab
                     stats={meQuery.data!.stats}
                     totalProperties={meQuery.data!.properties.length}
@@ -358,8 +386,8 @@ export function AgencyDashboard() {
                   />
                 </TabsContent>
 
-                <TabsContent value="properties" className="p-4 m-0">
-                  <PropertiesTab
+                <TabsContent value="properties" className="p-4 m-0 animate-fade-in">
+                  <PropertiesTabContent
                     properties={meQuery.data!.properties}
                     onCreate={handleCreateNew}
                     onEdit={handleEdit}
@@ -367,12 +395,13 @@ export function AgencyDashboard() {
                   />
                 </TabsContent>
 
-                <TabsContent value="form" className="p-4 m-0">
+                <TabsContent value="form" className="p-4 m-0 animate-fade-in">
                   <div className="mb-3">
-                    <h2 className="text-base font-semibold">
+                    <div className="eyebrow text-primary/80">Formulário</div>
+                    <h2 className="text-base font-semibold tracking-tight">
                       {editProperty ? "Editar imóvel" : "Cadastrar imóvel"}
                     </h2>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {editProperty
                         ? "Atualize as informações do seu anúncio."
                         : "Preencha as informações para publicar um novo anúncio."}
@@ -388,25 +417,25 @@ export function AgencyDashboard() {
                   />
                 </TabsContent>
 
-                <TabsContent value="leads" className="p-4 m-0">
+                <TabsContent value="leads" className="p-4 m-0 animate-fade-in">
                   <LeadsTab />
                 </TabsContent>
 
-                <TabsContent value="stats" className="p-4 m-0">
+                <TabsContent value="stats" className="p-4 m-0 animate-fade-in">
                   <StatsTab
                     properties={meQuery.data!.properties}
                     stats={meQuery.data!.stats}
                   />
                 </TabsContent>
 
-                <TabsContent value="plans" className="p-4 m-0">
-                  <PlansTab
+                <TabsContent value="plans" className="p-4 m-0 animate-fade-in">
+                  <PlansTabContent
                     plans={plansQuery.data?.plans ?? []}
                     subscription={subscription}
                   />
                 </TabsContent>
 
-                <TabsContent value="profile" className="p-4 m-0">
+                <TabsContent value="profile" className="p-4 m-0 animate-fade-in">
                   <ProfileTab
                     agency={agency}
                     user={session.user}
@@ -431,12 +460,20 @@ export function AgencyDashboard() {
 function NotLoggedIn({ onLogin }: { onLogin: () => void }) {
   return (
     <div className="flex-1 grid place-items-center px-6">
-      <div className="text-center max-w-xs">
-        <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary grid place-items-center mx-auto mb-4">
-          <UserRound className="w-7 h-7" />
+      <div className="text-center max-w-xs animate-fade-in">
+        <div className="relative mb-5">
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-primary/15 blur-2xl rounded-full"
+          />
+          <div className="relative w-16 h-16 rounded-2xl bg-card border border-border/60 grid place-items-center text-primary shadow-sm mx-auto">
+            <UserRound className="w-7 h-7" />
+          </div>
         </div>
-        <h3 className="text-sm font-semibold mb-1">Faça login para acessar o painel.</h3>
-        <p className="text-xs text-muted-foreground mb-4">
+        <h3 className="text-sm font-semibold mb-1.5 tracking-tight">
+          Faça login para acessar o painel.
+        </h3>
+        <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
           Acesse sua conta de anunciante para gerenciar imóveis, leads e
           assinatura.
         </p>
@@ -451,12 +488,20 @@ function NotLoggedIn({ onLogin }: { onLogin: () => void }) {
 function NotAdvertiser({ onRegister }: { onRegister: () => void }) {
   return (
     <div className="flex-1 grid place-items-center px-6">
-      <div className="text-center max-w-xs">
-        <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 grid place-items-center mx-auto mb-4">
-          <ShieldAlert className="w-7 h-7" />
+      <div className="text-center max-w-xs animate-fade-in">
+        <div className="relative mb-5">
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-amber-500/15 blur-2xl rounded-full"
+          />
+          <div className="relative w-16 h-16 rounded-2xl bg-card border border-amber-500/30 grid place-items-center text-amber-400 shadow-sm mx-auto">
+            <ShieldAlert className="w-7 h-7" />
+          </div>
         </div>
-        <h3 className="text-sm font-semibold mb-1">Esta área é para anunciantes.</h3>
-        <p className="text-xs text-muted-foreground mb-4">
+        <h3 className="text-sm font-semibold mb-1.5 tracking-tight">
+          Esta área é para anunciantes.
+        </h3>
+        <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
           Crie uma conta como imobiliária ou proprietário para anunciar imóveis
           no mapa.
         </p>
@@ -473,16 +518,16 @@ function DashboardSkeleton() {
     <div className="p-4 space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
+          <Skeleton key={i} className="h-24 rounded-xl skeleton-premium" />
         ))}
       </div>
-      <Skeleton className="h-32 rounded-xl" />
-      <Skeleton className="h-64 rounded-xl" />
+      <Skeleton className="h-32 rounded-xl skeleton-premium" />
+      <Skeleton className="h-64 rounded-xl skeleton-premium" />
     </div>
   );
 }
 
-function ErrorState({
+function ErrorStateInline({
   message,
   onRetry,
 }: {
@@ -491,11 +536,17 @@ function ErrorState({
 }) {
   return (
     <div className="flex-1 grid place-items-center px-6">
-      <div className="text-center max-w-xs">
-        <div className="w-14 h-14 rounded-2xl bg-destructive/10 text-destructive grid place-items-center mx-auto mb-4">
-          <AlertTriangle className="w-7 h-7" />
+      <div className="text-center max-w-xs animate-fade-in">
+        <div className="relative mb-5">
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-rose-500/15 blur-2xl rounded-full"
+          />
+          <div className="relative w-16 h-16 rounded-2xl bg-card border border-rose-500/30 grid place-items-center text-rose-400 shadow-sm mx-auto">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
         </div>
-        <h3 className="text-sm font-semibold mb-1">{message}</h3>
+        <h3 className="text-sm font-semibold mb-1.5 tracking-tight">{message}</h3>
         <Button onClick={onRetry} variant="outline" className="mt-3">
           Tentar novamente
         </Button>
@@ -531,22 +582,33 @@ function OverviewTab({
   const current = subscription?.currentActive ?? 0;
   const max = subscription?.maxProperties ?? 0;
   const pct = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
+  const remaining = Math.max(0, max - current);
 
   return (
     <div className="space-y-4">
       {isAgencyPending && (
-        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-300 grid place-items-center shrink-0 ring-1 ring-amber-500/25">
+            <AlertTriangle className="w-4 h-4" />
+          </div>
           <div>
-            <p className="text-xs font-semibold text-amber-800">
+            <p className="text-xs font-semibold text-amber-300">
               Sua imobiliária está em análise.
             </p>
-            <p className="text-[11px] text-amber-700 mt-0.5">
+            <p className="text-[11px] text-amber-200/80 mt-0.5 leading-relaxed">
               Você poderá publicar imóveis após a aprovação do nosso time.
             </p>
           </div>
         </div>
       )}
+
+      {/* Section header */}
+      <div>
+        <div className="eyebrow text-primary/80">Dashboard</div>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground mt-0.5">
+          Olá, aqui está sua visão geral
+        </h2>
+      </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -587,33 +649,40 @@ function OverviewTab({
 
       {/* Plan info */}
       {!hasActivePlan ? (
-        <Card className="border-primary/30 bg-primary/5">
+        <Card className="border-primary/30 bg-primary/8 shadow-none">
           <CardContent className="p-4 flex flex-col items-start gap-3">
             <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-primary" />
-              <span className="text-sm font-semibold">
-                Escolha um plano para começar a anunciar
-              </span>
+              <div className="w-9 h-9 rounded-lg bg-primary/15 text-primary grid place-items-center ring-1 ring-primary/25">
+                <Crown className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="eyebrow text-primary/80">Assinatura</div>
+                <span className="text-sm font-semibold tracking-tight block">
+                  Escolha um plano para começar a anunciar
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               Sem plano ativo você não pode publicar imóveis no mapa. Escolha um
               plano que cabe no seu portfólio.
             </p>
-            <Button onClick={onUpgrade} size="sm" className="mt-1">
+            <Button onClick={onUpgrade} size="sm" className="shadow-sm shadow-primary/20">
               Ver planos
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="shadow-none border-border/60 bg-card/60 backdrop-blur-sm">
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Crown className="w-4 h-4 text-primary" />
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm flex items-center gap-2 tracking-tight">
+                <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary grid place-items-center ring-1 ring-primary/25">
+                  <Crown className="w-3.5 h-3.5" />
+                </div>
                 Plano atual
               </CardTitle>
               {currentPlan && (
-                <Badge className="bg-primary/10 text-primary border-primary/20">
+                <Badge className="bg-primary/15 text-primary border-primary/30">
                   {currentPlan.name}
                 </Badge>
               )}
@@ -622,21 +691,35 @@ function OverviewTab({
               {currentPlan?.description || "Assinatura ativa"}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2.5 pt-1">
             <div className="flex items-baseline justify-between text-xs">
-              <span className="text-muted-foreground">Imóveis ativos</span>
-              <span className="font-semibold">
-                {current} / {max}
+              <span className="text-muted-foreground eyebrow !text-[10px]">
+                Imóveis ativos
+              </span>
+              <span className="font-semibold price tabular-nums">
+                {current}{" "}
+                <span className="text-muted-foreground font-normal">/ {max}</span>
               </span>
             </div>
             <Progress value={pct} className="h-2" />
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-muted-foreground">
+            <div className="flex items-center justify-between pt-1 gap-2">
+              <span
+                className={cn(
+                  "text-[11px] font-medium flex items-center gap-1.5",
+                  pct >= 100 ? "text-amber-400" : "text-emerald-400"
+                )}
+              >
+                <span
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    pct >= 100 ? "bg-amber-400" : "bg-emerald-400"
+                  )}
+                />
                 {pct >= 100
                   ? "Limite atingido — faça upgrade para publicar mais."
-                  : `${max - current} imóvel(is) disponível(is) no plano.`}
+                  : `${remaining} imóvel(is) disponível(is) no plano.`}
               </span>
-              <Button onClick={onUpgrade} variant="outline" size="sm">
+              <Button onClick={onUpgrade} variant="outline" size="sm" className="shrink-0">
                 Fazer upgrade
               </Button>
             </div>
@@ -645,18 +728,26 @@ function OverviewTab({
       )}
 
       {totalProperties === 0 && (
-        <Card className="border-dashed">
+        <Card className="border-dashed border-border/60 bg-card/40 shadow-none">
           <CardContent className="p-6 flex flex-col items-center text-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-muted grid place-items-center text-muted-foreground">
-              <Building2 className="w-6 h-6" />
+            <div className="relative">
+              <div
+                aria-hidden
+                className="absolute inset-0 bg-primary/10 blur-2xl rounded-full"
+              />
+              <div className="relative w-14 h-14 rounded-2xl bg-card border border-border/60 grid place-items-center text-muted-foreground shadow-sm">
+                <Building2 className="w-6 h-6" />
+              </div>
             </div>
             <div>
-              <p className="text-sm font-semibold">Nenhum imóvel cadastrado</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-sm font-semibold tracking-tight">
+                Nenhum imóvel cadastrado
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                 Cadastre seu primeiro imóvel para aparecer no mapa.
               </p>
             </div>
-            <Button onClick={onCreate} size="sm" className="mt-1">
+            <Button onClick={onCreate} size="sm" className="mt-1 shadow-sm shadow-primary/20">
               <PlusCircle className="w-4 h-4 mr-1.5" />
               Cadastrar imóvel
             </Button>
@@ -684,18 +775,20 @@ function StatCard({
     <>
       <div
         className={cn(
-          "w-7 h-7 rounded-md grid place-items-center mb-2",
+          "w-8 h-8 rounded-lg grid place-items-center mb-2 ring-1 transition-colors",
           tone === "primary"
-            ? "bg-primary/10 text-primary"
-            : "bg-muted text-muted-foreground"
+            ? "bg-primary/15 text-primary ring-primary/25 shadow-sm shadow-primary/10"
+            : "bg-muted text-muted-foreground ring-border/40 group-hover:bg-primary/10 group-hover:text-primary"
         )}
       >
         {icon}
       </div>
-      <div className="text-xl font-bold leading-tight text-foreground">
+      <div className="text-[1.65rem] font-semibold leading-none tracking-tight text-foreground price tabular-nums">
         {value}
       </div>
-      <div className="text-[11px] text-muted-foreground mt-0.5">{label}</div>
+      <div className="eyebrow !text-[10px] mt-1.5 text-muted-foreground/80">
+        {label}
+      </div>
     </>
   );
 
@@ -704,20 +797,24 @@ function StatCard({
       <button
         type="button"
         onClick={onClick}
-        className="text-left rounded-xl border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-accent/40 cursor-pointer"
+        className="group text-left rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm p-3 transition-all duration-200 hover:border-primary/40 hover:bg-card hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/5 cursor-pointer"
       >
         {content}
       </button>
     );
   }
-  return <div className="rounded-xl border bg-card p-3">{content}</div>;
+  return (
+    <div className="group rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm p-3 transition-all duration-200 hover:border-primary/40 hover:bg-card hover:shadow-md hover:shadow-primary/5">
+      {content}
+    </div>
+  );
 }
 
 // ============================================================
 // Tab 2: Meus imóveis
 // ============================================================
 
-function PropertiesTab({
+function PropertiesTabContent({
   properties,
   onCreate,
   onEdit,
@@ -730,7 +827,7 @@ function PropertiesTab({
 }) {
   if (!properties.length) {
     return (
-      <EmptyState
+      <EmptyStateInline
         icon={<Building2 className="w-9 h-9" />}
         title="Cadastre seu primeiro imóvel."
         description="Seus anúncios aparecerão aqui. Você poderá editar, pausar e acompanhar as métricas."
@@ -743,18 +840,21 @@ function PropertiesTab({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">
-          {properties.length} imóvel(is)
-        </h2>
-        <Button onClick={onCreate} size="sm">
+        <div>
+          <div className="eyebrow text-primary/80">Portfólio</div>
+          <h2 className="text-sm font-semibold tracking-tight">
+            {properties.length} imóvel(is)
+          </h2>
+        </div>
+        <Button onClick={onCreate} size="sm" className="shadow-sm shadow-primary/20">
           <PlusCircle className="w-4 h-4 mr-1.5" />
           Novo
         </Button>
       </div>
 
       {editLoading && (
-        <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2 flex items-center gap-2">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        <div className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2 flex items-center gap-2 border border-border/60">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
           Carregando imóvel para edição…
         </div>
       )}
@@ -816,14 +916,15 @@ function PropertyRow({
   const isPaused = status === PROPERTY_STATUS.PAUSED;
 
   return (
-    <div className="flex items-start gap-3 p-3 rounded-xl border bg-card hover:border-primary/30 transition-colors">
+    <div className="group flex items-start gap-3 p-3 rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm transition-all duration-200 hover:border-primary/40 hover:bg-card hover:shadow-md hover:shadow-primary/5">
       {/* Thumb */}
-      <div className="w-16 h-16 rounded-md overflow-hidden bg-muted shrink-0">
+      <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0 ring-1 ring-border/40 relative">
         {property.primaryImage ? (
           <img
             src={property.primaryImage}
             alt={property.title}
-            className="w-full h-full object-cover"
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full grid place-items-center text-muted-foreground">
@@ -835,31 +936,33 @@ function PropertyRow({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium text-foreground clamp-1">
+          <p className="text-sm font-medium text-foreground clamp-1 tracking-tight">
             {property.title}
           </p>
           <StatusBadge status={status} />
         </div>
         <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-          <MapPin className="w-3 h-3" />
-          {PROPERTY_TYPE_LABELS[property.propertyType] || property.propertyType}
-          {property.neighborhood ? ` · ${property.neighborhood}` : ""}
-          {property.city ? ` · ${property.city}` : ""}
+          <MapPin className="w-3 h-3 shrink-0" />
+          <span className="truncate">
+            {PROPERTY_TYPE_LABELS[property.propertyType] || property.propertyType}
+            {property.neighborhood ? ` · ${property.neighborhood}` : ""}
+            {property.city ? ` · ${property.city}` : ""}
+          </span>
         </p>
-        <p className="text-sm font-bold text-primary mt-1">
+        <p className="text-sm font-bold text-primary mt-1 price tabular-nums">
           {formatPrice(property.price, property.purpose)}
         </p>
         <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 tabular-nums">
             <Eye className="w-3 h-3" /> {property.views}
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 tabular-nums">
             <MessageSquare className="w-3 h-3" /> {property.leadsCount}
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 tabular-nums">
             <Heart className="w-3 h-3" /> {property.favoritesCount}
           </span>
-          <span className="text-[10px] text-muted-foreground/80">
+          <span className="text-[10px] text-muted-foreground/70">
             · {formatRelativeTime(property.lastConfirmedAt)}
           </span>
         </div>
@@ -871,7 +974,7 @@ function PropertyRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="h-8 w-8 shrink-0 rounded-lg hover:bg-muted"
             aria-label="Ações"
           >
             <MoreVertical className="w-4 h-4" />
@@ -976,23 +1079,34 @@ function DeletePropertyItem({
 function StatusBadge({ status }: { status: string }) {
   const label = PROPERTY_STATUS_LABELS[status] || status;
   const tone: Record<string, string> = {
-    ACTIVE: "bg-primary/10 text-primary border-primary/20",
-    PAUSED: "bg-muted text-muted-foreground border-border",
-    PENDING_APPROVAL: "bg-amber-100 text-amber-700 border-amber-200",
-    RENTED: "bg-violet-100 text-violet-700 border-violet-200",
-    SOLD: "bg-rose-100 text-rose-700 border-rose-200",
-    EXPIRED: "bg-slate-100 text-slate-600 border-slate-200",
-    REJECTED: "bg-destructive/10 text-destructive border-destructive/20",
-    DRAFT: "bg-slate-100 text-slate-600 border-slate-200",
+    ACTIVE: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+    PAUSED: "bg-zinc-500/15 text-zinc-300 border-zinc-500/25",
+    PENDING_APPROVAL: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    RENTED: "bg-teal-500/15 text-teal-300 border-teal-500/30",
+    SOLD: "bg-teal-500/15 text-teal-300 border-teal-500/30",
+    EXPIRED: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+    REJECTED: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+    DRAFT: "bg-zinc-500/15 text-zinc-300 border-zinc-500/25",
+  };
+  const dot: Record<string, string> = {
+    ACTIVE: "bg-emerald-400",
+    PAUSED: "bg-zinc-400",
+    PENDING_APPROVAL: "bg-amber-400",
+    RENTED: "bg-teal-400",
+    SOLD: "bg-teal-400",
+    EXPIRED: "bg-zinc-500",
+    REJECTED: "bg-rose-400",
+    DRAFT: "bg-zinc-400",
   };
   return (
     <Badge
       variant="outline"
       className={cn(
-        "text-[10px] h-5 px-1.5 font-medium shrink-0",
+        "text-[10px] h-5 px-1.5 font-medium shrink-0 gap-1.5",
         tone[status] || "bg-muted text-muted-foreground border-border"
       )}
     >
+      <span className={cn("w-1.5 h-1.5 rounded-full", dot[status] || "bg-zinc-400")} />
       {label}
     </Badge>
   );
@@ -1019,19 +1133,22 @@ function LeadsTab() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-16 rounded-xl" />
+          <Skeleton key={i} className="h-16 rounded-xl skeleton-premium" />
         ))}
       </div>
     );
   }
   if (error) {
     return (
-      <ErrorState message="Não foi possível carregar os leads." onRetry={() => refetch()} />
+      <ErrorStateInline
+        message="Não foi possível carregar os leads."
+        onRetry={() => refetch()}
+      />
     );
   }
   if (!data?.leads.length) {
     return (
-      <EmptyState
+      <EmptyStateInline
         icon={<MessageSquare className="w-9 h-9" />}
         title="Nenhum lead ainda."
         description="Quando alguém entrar em contato via WhatsApp, telefone ou demonstrar interesse em um imóvel seu, aparecerá aqui."
@@ -1042,7 +1159,12 @@ function LeadsTab() {
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-sm font-semibold">{data.total} lead(s)</h2>
+        <div>
+          <div className="eyebrow text-primary/80">Inbox</div>
+          <h2 className="text-sm font-semibold tracking-tight">
+            {data.total} lead(s)
+          </h2>
+        </div>
         <span className="text-[11px] text-muted-foreground">
           Mais recentes primeiro
         </span>
@@ -1056,32 +1178,37 @@ function LeadsTab() {
 
 const LEAD_SOURCE_META: Record<
   string,
-  { label: string; icon: React.ReactNode; tone: string }
+  { label: string; icon: React.ReactNode; tone: string; dot: string }
 > = {
   WHATSAPP: {
     label: "WhatsApp",
     icon: <MessageCircle className="w-3 h-3" />,
-    tone: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    tone: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+    dot: "bg-emerald-400",
   },
   PHONE: {
     label: "Telefone",
     icon: <Phone className="w-3 h-3" />,
-    tone: "bg-teal-100 text-teal-700 border-teal-200",
+    tone: "bg-teal-500/15 text-teal-300 border-teal-500/30",
+    dot: "bg-teal-400",
   },
   INTEREST: {
     label: "Interesse",
     icon: <Heart className="w-3 h-3" />,
-    tone: "bg-amber-100 text-amber-700 border-amber-200",
+    tone: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    dot: "bg-amber-400",
   },
   DIRECTIONS: {
     label: "Como chegar",
     icon: <Navigation className="w-3 h-3" />,
-    tone: "bg-violet-100 text-violet-700 border-violet-200",
+    tone: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+    dot: "bg-violet-400",
   },
   SHARE: {
     label: "Compartilhamento",
     icon: <Share2 className="w-3 h-3" />,
-    tone: "bg-slate-100 text-slate-700 border-slate-200",
+    tone: "bg-zinc-500/15 text-zinc-300 border-zinc-500/25",
+    dot: "bg-zinc-400",
   },
 };
 
@@ -1090,18 +1217,19 @@ function LeadRow({ lead }: { lead: LeadItem }) {
     label: lead.source,
     icon: <MessageSquare className="w-3 h-3" />,
     tone: "bg-muted text-muted-foreground border-border",
+    dot: "bg-zinc-400",
   };
 
   return (
-    <div className="rounded-xl border bg-card p-3">
+    <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm p-3 transition-all duration-200 hover:bg-card hover:border-primary/30 hover:shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           {lead.property && (
-            <p className="text-sm font-medium text-foreground clamp-1">
+            <p className="text-sm font-medium text-foreground clamp-1 tracking-tight">
               {lead.property.title}
             </p>
           )}
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-[11px] text-muted-foreground mt-0.5 price tabular-nums">
             {lead.property
               ? `${formatPrice(lead.property.price, lead.property.purpose)}`
               : "Imóvel removido"}
@@ -1110,17 +1238,18 @@ function LeadRow({ lead }: { lead: LeadItem }) {
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] h-5 px-1.5 font-medium shrink-0 gap-1",
+            "text-[10px] h-5 px-1.5 font-medium shrink-0 gap-1.5",
             meta.tone
           )}
         >
+          <span className={cn("w-1.5 h-1.5 rounded-full", meta.dot)} />
           {meta.icon}
           {meta.label}
         </Badge>
       </div>
 
       {lead.message && (
-        <p className="text-xs text-foreground/80 mt-2 bg-muted/60 rounded-md p-2">
+        <p className="text-xs text-foreground/80 mt-2 bg-muted/40 rounded-md p-2 border border-border/40 leading-relaxed italic">
           “{lead.message}”
         </p>
       )}
@@ -1133,7 +1262,10 @@ function LeadRow({ lead }: { lead: LeadItem }) {
         ) : (
           <span>Sem contato</span>
         )}
-        <span>{formatRelativeTime(lead.createdAt)}</span>
+        <span className="flex items-center gap-1">
+          <CalendarDays className="w-3 h-3" />
+          {formatRelativeTime(lead.createdAt)}
+        </span>
       </div>
     </div>
   );
@@ -1158,12 +1290,23 @@ function StatsTab({
 
   return (
     <div className="space-y-4">
+      <div>
+        <div className="eyebrow text-primary/80">Performance</div>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground mt-0.5">
+          Estatísticas
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Acompanhe o engajamento dos seus anúncios.
+        </p>
+      </div>
+
       {/* Resumo */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MiniStat
           icon={<Eye className="w-4 h-4" />}
           label="Visualizações"
           value={stats.views}
+          tone="primary"
         />
         <MiniStat
           icon={<MessageSquare className="w-4 h-4" />}
@@ -1182,10 +1325,12 @@ function StatsTab({
         />
       </div>
 
-      <Card>
+      <Card className="shadow-none border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary" />
+          <CardTitle className="text-sm flex items-center gap-2 tracking-tight">
+            <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary grid place-items-center ring-1 ring-primary/25">
+              <TrendingUp className="w-3.5 h-3.5" />
+            </div>
             Imóveis mais visualizados
           </CardTitle>
           <CardDescription className="text-xs">
@@ -1199,17 +1344,28 @@ function StatsTab({
             </p>
           ) : (
             top.map((p, i) => (
-              <div key={p.id} className="space-y-1">
+              <div key={p.id} className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <span className="flex items-center gap-2 min-w-0">
-                    <span className="w-4 h-4 grid place-items-center rounded bg-muted text-[10px] font-bold text-muted-foreground shrink-0">
+                    <span
+                      className={cn(
+                        "w-5 h-5 grid place-items-center rounded text-[10px] font-bold shrink-0 ring-1 tabular-nums",
+                        i === 0
+                          ? "bg-amber-500/20 text-amber-300 ring-amber-500/30"
+                          : i === 1
+                          ? "bg-zinc-400/20 text-zinc-200 ring-zinc-400/30"
+                          : i === 2
+                          ? "bg-orange-600/20 text-orange-300 ring-orange-600/30"
+                          : "bg-muted text-muted-foreground ring-border/40"
+                      )}
+                    >
                       {i + 1}
                     </span>
                     <span className="clamp-1 font-medium text-foreground">
                       {p.title}
                     </span>
                   </span>
-                  <span className="font-semibold text-foreground shrink-0">
+                  <span className="font-semibold text-foreground shrink-0 tabular-nums">
                     {p.views}
                   </span>
                 </div>
@@ -1230,18 +1386,31 @@ function MiniStat({
   icon,
   label,
   value,
+  tone,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
+  tone?: "primary";
 }) {
   return (
-    <div className="rounded-xl border bg-card p-3">
-      <div className="w-7 h-7 rounded-md bg-primary/10 text-primary grid place-items-center mb-2">
+    <div className="group rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm p-3 transition-all duration-200 hover:border-primary/40 hover:bg-card hover:shadow-md hover:shadow-primary/5">
+      <div
+        className={cn(
+          "w-8 h-8 rounded-lg grid place-items-center mb-2 ring-1 transition-colors",
+          tone === "primary"
+            ? "bg-primary/15 text-primary ring-primary/25"
+            : "bg-muted text-muted-foreground ring-border/40 group-hover:bg-primary/10 group-hover:text-primary"
+        )}
+      >
         {icon}
       </div>
-      <div className="text-xl font-bold leading-tight">{value}</div>
-      <div className="text-[11px] text-muted-foreground mt-0.5">{label}</div>
+      <div className="text-[1.65rem] font-semibold leading-none tracking-tight price tabular-nums">
+        {value}
+      </div>
+      <div className="eyebrow !text-[10px] mt-1.5 text-muted-foreground/80">
+        {label}
+      </div>
     </div>
   );
 }
@@ -1250,7 +1419,7 @@ function MiniStat({
 // Tab 6: Assinatura
 // ============================================================
 
-function PlansTab({
+function PlansTabContent({
   plans,
   subscription,
 }: {
@@ -1282,8 +1451,11 @@ function PlansTab({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-sm font-semibold">Planos disponíveis</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <div className="eyebrow text-primary/80">Assinatura</div>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground mt-0.5">
+          Planos disponíveis
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
           Escolha o plano que cabe no seu portfólio. Você pode trocar a
           qualquer momento.
         </p>
@@ -1296,58 +1468,68 @@ function PlansTab({
             p.billingCycle === "ONCE"
               ? `${formatPrice(p.price)} / ${p.durationDays || 30} dias`
               : `${formatPrice(p.price)} / mês`;
+          const [price, ...cycleParts] = priceLabel.split(" ");
           return (
             <Card
               key={p.id}
               className={cn(
-                "relative overflow-hidden",
-                isCurrent && "border-primary ring-1 ring-primary/30"
+                "relative overflow-hidden shadow-none border-border/60 bg-card/60 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5",
+                isCurrent
+                  ? "border-primary ring-1 ring-primary/30 bg-primary/5"
+                  : "hover:border-primary/40"
               )}
             >
               {isCurrent && (
-                <div className="absolute top-0 right-0">
-                  <div className="bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-bl-md">
-                    Plano atual
+                <div className="absolute top-0 right-0 z-10">
+                  <div className="bg-primary text-primary-foreground text-[10px] font-bold px-2.5 py-1 rounded-bl-lg shadow-sm">
+                    PLANO ATUAL
                   </div>
                 </div>
               )}
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  {p.code === PLAN_CODES.START && (
-                    <Home className="w-4 h-4 text-primary" />
-                  )}
-                  {p.code === PLAN_CODES.PRO && (
-                    <Building className="w-4 h-4 text-primary" />
-                  )}
-                  {(p.code === PLAN_CODES.BUSINESS ||
-                    p.code === PLAN_CODES.ENTERPRISE) && (
-                    <Crown className="w-4 h-4 text-primary" />
-                  )}
-                  {p.code === PLAN_CODES.OWNER_SINGLE && (
-                    <UserRound className="w-4 h-4 text-primary" />
-                  )}
+                <CardTitle className="text-base flex items-center gap-2 tracking-tight">
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-lg grid place-items-center ring-1",
+                      isCurrent
+                        ? "bg-primary/15 text-primary ring-primary/25"
+                        : "bg-primary/10 text-primary ring-primary/20"
+                    )}
+                  >
+                    {p.code === PLAN_CODES.START && <Home className="w-4 h-4" />}
+                    {p.code === PLAN_CODES.PRO && <Building className="w-4 h-4" />}
+                    {(p.code === PLAN_CODES.BUSINESS ||
+                      p.code === PLAN_CODES.ENTERPRISE) && (
+                      <Crown className="w-4 h-4" />
+                    )}
+                    {p.code === PLAN_CODES.OWNER_SINGLE && (
+                      <UserRound className="w-4 h-4" />
+                    )}
+                  </div>
                   {p.name}
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs leading-relaxed">
                   {p.description}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div>
-                  <span className="text-xl font-bold text-foreground">
-                    {priceLabel.split(" ")[0]}
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold text-foreground price tabular-nums tracking-tight">
+                    {price}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {" "}
-                    {priceLabel.split(" ").slice(1).join(" ")}
+                    {cycleParts.join(" ")}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <Badge variant="secondary" className="font-medium">
+                  <Badge
+                    variant="outline"
+                    className="font-medium bg-primary/10 text-primary border-primary/20"
+                  >
                     {p.maxProperties} imóvel(is)
                   </Badge>
                   <span className="text-muted-foreground capitalize">
-                    {p.billingCycle === "ONCE" ? "Único" : "Mensal"}
+                    {p.billingCycle === "ONCE" ? "Pagamento único" : "Mensal"}
                   </span>
                 </div>
                 {isCurrent ? (
@@ -1356,7 +1538,7 @@ function PlansTab({
                   </Button>
                 ) : (
                   <Button
-                    className="w-full"
+                    className="w-full shadow-sm shadow-primary/20"
                     onClick={() => subscribeMutation.mutate(p.id)}
                     disabled={subscribeMutation.isPending}
                   >
@@ -1373,9 +1555,11 @@ function PlansTab({
         })}
       </div>
 
-      <div className="flex items-start gap-2 bg-muted/60 border rounded-lg p-3">
-        <CreditCard className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-        <p className="text-[11px] text-muted-foreground">
+      <div className="flex items-start gap-2.5 bg-muted/40 border border-border/60 rounded-xl p-3.5">
+        <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary grid place-items-center shrink-0 ring-1 ring-primary/25">
+          <CreditCard className="w-3.5 h-3.5" />
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
           Pagamento processado de forma simulada para o MVP. Integração com
           gateway de pagamento disponível sob demanda.
         </p>
@@ -1403,19 +1587,32 @@ function ProfileTab({
 }) {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border bg-card p-4">
+      <div>
+        <div className="eyebrow text-primary/80">Conta</div>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground mt-0.5">
+          Perfil
+        </h2>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm p-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-primary/10 text-primary grid place-items-center text-lg font-bold">
+          <div
+            className={cn(
+              "w-14 h-14 rounded-full grid place-items-center text-xl font-bold shrink-0 ring-1 bg-gradient-to-br",
+              ROLE_AVATAR_COLOR[role] ?? ROLE_AVATAR_COLOR.USER
+            )}
+          >
             {user.name?.[0]?.toUpperCase() || "U"}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">
+            <p className="text-sm font-semibold text-foreground truncate tracking-tight">
               {user.name}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+              <Mail className="w-3 h-3" />
               {user.email}
             </p>
-            <Badge variant="secondary" className="text-[10px] mt-1">
+            <Badge variant="secondary" className="text-[10px] mt-1.5 font-medium">
               {ROLE_LABELS[role] || role}
             </Badge>
           </div>
@@ -1424,10 +1621,12 @@ function ProfileTab({
 
       {agency && <AgencyProfileForm agency={agency} />}
       {owner && !agency && (
-        <Card>
+        <Card className="shadow-none border-border/60 bg-card/60 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Home className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm flex items-center gap-2 tracking-tight">
+              <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary grid place-items-center ring-1 ring-primary/25">
+                <Home className="w-3.5 h-3.5" />
+              </div>
               Conta de proprietário
             </CardTitle>
           </CardHeader>
@@ -1438,8 +1637,8 @@ function ProfileTab({
                 variant="outline"
                 className={
                   owner.verificationStatus === "VERIFIED"
-                    ? "bg-primary/10 text-primary border-primary/20"
-                    : "bg-amber-100 text-amber-700 border-amber-200"
+                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                    : "bg-amber-500/15 text-amber-300 border-amber-500/30"
                 }
               >
                 {owner.verificationStatus === "VERIFIED"
@@ -1447,7 +1646,7 @@ function ProfileTab({
                   : "Em análise"}
               </Badge>
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground leading-relaxed">
               Proprietários podem anunciar um imóvel por vez com o plano Anúncio
               Individual.
             </p>
@@ -1455,14 +1654,16 @@ function ProfileTab({
         </Card>
       )}
       {broker && !agency && (
-        <Card>
+        <Card className="shadow-none border-border/60 bg-card/60 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <UserRound className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm flex items-center gap-2 tracking-tight">
+              <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary grid place-items-center ring-1 ring-primary/25">
+                <UserRound className="w-3.5 h-3.5" />
+              </div>
               Corretor
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
+          <CardContent className="text-xs text-muted-foreground leading-relaxed">
             Conta de corretor vinculada. Anúncios aparecem no mapa e leads são
             recebidos aqui.
           </CardContent>
@@ -1472,12 +1673,10 @@ function ProfileTab({
       <Separator />
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase">
-          Conta
-        </h3>
+        <h3 className="eyebrow text-muted-foreground/80">Conta</h3>
         <Button
           variant="outline"
-          className="w-full justify-start"
+          className="w-full justify-start hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
           onClick={() => signOut({ callbackUrl: "/" })}
         >
           <LogOut className="w-4 h-4 mr-2" />
@@ -1527,23 +1726,25 @@ function AgencyProfileForm({ agency }: { agency: AgencyProfile }) {
   });
 
   return (
-    <Card>
+    <Card className="shadow-none border-border/60 bg-card/60 backdrop-blur-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-primary" />
+        <CardTitle className="text-sm flex items-center gap-2 tracking-tight">
+          <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary grid place-items-center ring-1 ring-primary/25">
+            <Building2 className="w-3.5 h-3.5" />
+          </div>
           Perfil da imobiliária
         </CardTitle>
-        <CardDescription className="text-xs">
-          Status:{" "}
+        <CardDescription className="text-xs flex items-center gap-2">
+          <span>Status:</span>
           <Badge
             variant="outline"
             className={cn(
-              "ml-1 text-[10px]",
+              "text-[10px] font-medium",
               agency.status === "APPROVED"
-                ? "bg-primary/10 text-primary border-primary/20"
+                ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                 : agency.status === "PENDING"
-                ? "bg-amber-100 text-amber-700 border-amber-200"
-                : "bg-destructive/10 text-destructive border-destructive/20"
+                ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                : "bg-rose-500/15 text-rose-300 border-rose-500/30"
             )}
           >
             {agency.status === "APPROVED"
@@ -1622,7 +1823,7 @@ function AgencyProfileForm({ agency }: { agency: AgencyProfile }) {
         <Button
           onClick={() => mutation.mutate()}
           disabled={mutation.isPending}
-          className="w-full"
+          className="w-full shadow-sm shadow-primary/20"
         >
           {mutation.isPending ? (
             <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
@@ -1649,11 +1850,11 @@ function ProfileField({
 }) {
   return (
     <div className={className}>
-      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+      <Label className="eyebrow !text-[10px] text-muted-foreground/80 flex items-center gap-1">
         {icon}
         {label}
       </Label>
-      <div className="mt-1">{children}</div>
+      <div className="mt-1.5">{children}</div>
     </div>
   );
 }
@@ -1662,7 +1863,7 @@ function ProfileField({
 // Shared
 // ============================================================
 
-function EmptyState({
+function EmptyStateInline({
   icon,
   title,
   description,
@@ -1676,18 +1877,26 @@ function EmptyState({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-12 px-6">
-      <div className="w-16 h-16 rounded-2xl bg-muted grid place-items-center text-muted-foreground mb-4">
-        {icon}
+    <div className="flex flex-col items-center justify-center text-center py-14 px-6 animate-fade-in">
+      <div className="relative mb-5">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-primary/15 blur-2xl rounded-full"
+        />
+        <div className="relative w-16 h-16 rounded-2xl bg-card border border-border/60 grid place-items-center text-muted-foreground shadow-sm">
+          {icon}
+        </div>
       </div>
-      <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
+      <h3 className="text-sm font-semibold text-foreground mb-1.5 tracking-tight">
+        {title}
+      </h3>
       {description && (
-        <p className="text-xs text-muted-foreground max-w-[260px]">
+        <p className="text-xs text-muted-foreground max-w-[260px] leading-relaxed">
           {description}
         </p>
       )}
       {actionLabel && onAction && (
-        <Button onClick={onAction} size="sm" className="mt-4">
+        <Button onClick={onAction} size="sm" className="mt-4 shadow-sm shadow-primary/20">
           {actionLabel}
         </Button>
       )}

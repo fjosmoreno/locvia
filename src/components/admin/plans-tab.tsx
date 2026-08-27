@@ -9,6 +9,11 @@ import {
   Sparkles,
   Check,
   RotateCcw,
+  Home,
+  Building,
+  Crown,
+  UserRound,
+  Infinity as InfinityIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,6 +35,8 @@ import {
   ListSkeleton,
   type PlanAdmin,
 } from "@/components/admin/shared";
+import { PLAN_CODES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const BILLING_LABELS: Record<string, string> = {
   MONTHLY: "Mensal",
@@ -55,6 +62,14 @@ function toDraft(p: PlanAdmin): DraftPlan {
     active: p.active,
   };
 }
+
+const PLAN_ICON: Record<string, React.ReactNode> = {
+  [PLAN_CODES.START]: <Home className="w-4 h-4" />,
+  [PLAN_CODES.PRO]: <Building className="w-4 h-4" />,
+  [PLAN_CODES.BUSINESS]: <Crown className="w-4 h-4" />,
+  [PLAN_CODES.ENTERPRISE]: <Crown className="w-4 h-4" />,
+  [PLAN_CODES.OWNER_SINGLE]: <UserRound className="w-4 h-4" />,
+};
 
 export function PlansTab() {
   const qc = useQueryClient();
@@ -179,12 +194,14 @@ export function PlansTab() {
   return (
     <div className="p-4 space-y-4">
       {/* Aviso importante */}
-      <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/20 p-3 text-xs text-foreground/80">
-        <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-        <div>
+      <div className="flex items-start gap-3 rounded-xl bg-primary/8 border border-primary/25 p-3.5 text-xs text-foreground/85">
+        <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary grid place-items-center shrink-0 ring-1 ring-primary/25">
+          <Info className="w-3.5 h-3.5" />
+        </div>
+        <div className="leading-relaxed">
           <strong className="text-primary">Preços e limites são configuráveis</strong>{" "}
-          — não há valores fixos no código. Edite cada linha e clique em
-          <em> Salvar</em> para aplicar.
+          — não há valores fixos no código. Edite cada card e clique em{" "}
+          <em>Salvar</em> para aplicar.
         </div>
       </div>
 
@@ -195,14 +212,32 @@ export function PlansTab() {
           const d = drafts[plan.id] ?? toDraft(plan);
           const dirty = isDirty(plan);
           return (
-            <Card key={plan.id} className="p-4 gap-3 shadow-none">
+            <Card
+              key={plan.id}
+              className={cn(
+                "p-4 gap-3 shadow-none border-border/60 bg-card/60 backdrop-blur-sm transition-all",
+                d.active
+                  ? "ring-1 ring-primary/20 hover:border-primary/40"
+                  : "opacity-90 hover:opacity-100"
+              )}
+            >
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-semibold text-foreground flex-1 min-w-0 truncate">
+                <div
+                  className={cn(
+                    "w-9 h-9 rounded-lg grid place-items-center shrink-0 ring-1",
+                    d.active
+                      ? "bg-primary/15 text-primary ring-primary/25"
+                      : "bg-muted text-muted-foreground ring-border/40"
+                  )}
+                >
+                  {PLAN_ICON[plan.code] ?? <Sparkles className="w-4 h-4" />}
+                </div>
+                <h3 className="font-semibold text-foreground flex-1 min-w-0 truncate tracking-tight">
                   {d.name || "Sem nome"}
                 </h3>
                 <Badge
                   variant="outline"
-                  className="bg-muted text-muted-foreground border-border font-mono"
+                  className="bg-muted/50 text-muted-foreground border-border/60 font-mono text-[10px]"
                 >
                   {plan.code}
                 </Badge>
@@ -216,7 +251,12 @@ export function PlansTab() {
                       }))
                     }
                   />
-                  <span className="text-xs text-muted-foreground">
+                  <span
+                    className={cn(
+                      "text-[11px] font-medium",
+                      d.active ? "text-emerald-400" : "text-muted-foreground"
+                    )}
+                  >
                     {d.active ? "Ativo" : "Inativo"}
                   </span>
                 </div>
@@ -232,7 +272,7 @@ export function PlansTab() {
                         [plan.id]: { ...d, name: e.target.value },
                       }))
                     }
-                    className="h-8"
+                    className="h-9"
                   />
                 </Field>
                 <Field label="Ciclo de cobrança">
@@ -245,7 +285,7 @@ export function PlansTab() {
                       }))
                     }
                   >
-                    <SelectTrigger className="h-8 w-full bg-background">
+                    <SelectTrigger className="h-9 w-full bg-background">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -264,7 +304,7 @@ export function PlansTab() {
                       }))
                     }
                     inputMode="decimal"
-                    className="h-8"
+                    className="h-9 tabular-nums"
                   />
                 </Field>
                 <Field label="Máx. de imóveis">
@@ -277,7 +317,7 @@ export function PlansTab() {
                       }))
                     }
                     inputMode="numeric"
-                    className="h-8"
+                    className="h-9 tabular-nums"
                   />
                 </Field>
                 <Field label="Duração (dias, opcional)">
@@ -291,22 +331,23 @@ export function PlansTab() {
                     }
                     placeholder="Ex.: 30"
                     inputMode="numeric"
-                    className="h-8"
+                    className="h-9 tabular-nums"
                   />
                 </Field>
               </div>
 
               {plan.description && (
-                <p className="text-xs text-muted-foreground italic">
+                <p className="text-[11px] text-muted-foreground italic leading-relaxed">
                   {plan.description}
                 </p>
               )}
 
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-2 pt-2 border-t border-border/40">
                 <Button
                   size="sm"
                   onClick={() => save(plan)}
                   disabled={!dirty || updateMutation.isPending}
+                  className={cn(dirty && "shadow-sm shadow-primary/20")}
                 >
                   {updateMutation.isPending ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -326,7 +367,7 @@ export function PlansTab() {
                   </Button>
                 )}
                 {!dirty && (
-                  <span className="text-[11px] text-emerald-700 flex items-center gap-1">
+                  <span className="text-[11px] text-emerald-400 flex items-center gap-1">
                     <Check className="w-3 h-3" /> Salvo
                   </span>
                 )}
@@ -346,8 +387,8 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <Label className="text-[11px] text-muted-foreground uppercase tracking-wide">
+    <div className="space-y-1.5">
+      <Label className="eyebrow !text-[10px] text-muted-foreground/80">
         {label}
       </Label>
       {children}

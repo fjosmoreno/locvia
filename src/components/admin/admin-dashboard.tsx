@@ -43,16 +43,20 @@ export function AdminDashboard() {
     <Sheet open={open} onOpenChange={(o) => !o && closeDrawer()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-3xl p-0 flex flex-col gap-0"
+        className="w-full sm:max-w-3xl p-0 flex flex-col gap-0 border-l-border/60 bg-background"
       >
-        {/* Header */}
-        <SheetHeader className="px-4 py-4 border-b border-border flex-row items-center justify-between space-y-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground grid place-items-center shrink-0">
+        {/* Header — gradient subtle accent */}
+        <SheetHeader className="px-4 py-4 border-b border-border/60 flex-row items-center justify-between space-y-0 relative overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-transparent"
+          />
+          <div className="flex items-center gap-3 min-w-0 relative">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary grid place-items-center shrink-0 ring-1 ring-primary/25 shadow-sm shadow-primary/10">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <SheetTitle className="text-base leading-tight">
+              <SheetTitle className="text-base leading-tight tracking-tight">
                 Painel administrativo
               </SheetTitle>
               <SheetDescription className="text-xs">
@@ -67,7 +71,7 @@ export function AdminDashboard() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="h-8 w-8 shrink-0 relative rounded-lg hover:bg-muted"
             onClick={closeDrawer}
             aria-label="Fechar painel"
           >
@@ -78,65 +82,62 @@ export function AdminDashboard() {
         {/* Body */}
         {status === "loading" ? (
           <div className="flex-1 grid place-items-center text-muted-foreground text-sm">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Carregando painel…
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              <span className="text-xs">Carregando painel…</span>
             </div>
           </div>
         ) : !isAdmin ? (
           <AccessDenied onClose={closeDrawer} />
         ) : (
-          <Tabs defaultValue="overview" className="flex-1 flex flex-col gap-0 overflow-hidden">
-            {/* Tabs nav — sticky */}
-            <div className="border-b border-border bg-background/95 backdrop-blur sticky top-0 z-10 px-2 py-2">
+          <Tabs
+            defaultValue="overview"
+            className="flex-1 flex flex-col gap-0 overflow-hidden"
+          >
+            {/* Tabs nav — sticky, horizontal scrollable on mobile, ciano underline */}
+            <div className="border-b border-border/60 bg-background/95 backdrop-blur-md sticky top-0 z-10">
               <ScrollArea className="w-full">
-                <TabsList className="bg-muted/60 h-auto p-1 flex w-max sm:w-full sm:justify-start">
-                  <TabsTrigger value="overview" className="gap-1.5">
-                    <LayoutDashboard className="w-3.5 h-3.5" />
+                <TabsList className="bg-transparent h-auto p-0 gap-0 flex w-max sm:w-full sm:justify-start rounded-none">
+                  <AdminTabTrigger value="overview" icon={<LayoutDashboard className="w-3.5 h-3.5" />}>
                     Visão geral
-                  </TabsTrigger>
-                  <TabsTrigger value="agencies" className="gap-1.5">
-                    <Building2 className="w-3.5 h-3.5" />
+                  </AdminTabTrigger>
+                  <AdminTabTrigger value="agencies" icon={<Building2 className="w-3.5 h-3.5" />}>
                     Imobiliárias
-                  </TabsTrigger>
-                  <TabsTrigger value="properties" className="gap-1.5">
-                    <Home className="w-3.5 h-3.5" />
+                  </AdminTabTrigger>
+                  <AdminTabTrigger value="properties" icon={<Home className="w-3.5 h-3.5" />}>
                     Imóveis
-                  </TabsTrigger>
-                  <TabsTrigger value="users" className="gap-1.5">
-                    <UsersIcon className="w-3.5 h-3.5" />
+                  </AdminTabTrigger>
+                  <AdminTabTrigger value="users" icon={<UsersIcon className="w-3.5 h-3.5" />}>
                     Usuários
-                  </TabsTrigger>
-                  <TabsTrigger value="plans" className="gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
+                  </AdminTabTrigger>
+                  <AdminTabTrigger value="plans" icon={<Sparkles className="w-3.5 h-3.5" />}>
                     Planos
-                  </TabsTrigger>
-                  <TabsTrigger value="reports" className="gap-1.5">
-                    <Flag className="w-3.5 h-3.5" />
+                  </AdminTabTrigger>
+                  <AdminTabTrigger value="reports" icon={<Flag className="w-3.5 h-3.5" />}>
                     Denúncias
-                  </TabsTrigger>
+                  </AdminTabTrigger>
                 </TabsList>
               </ScrollArea>
             </div>
 
             {/* Tabs content — scrollable */}
-            <div className="flex-1 overflow-y-auto custom-scroll">
-              <TabsContent value="overview" className="mt-0">
+            <div className="flex-1 overflow-y-auto scroll-area">
+              <TabsContent value="overview" className="mt-0 animate-fade-in">
                 <OverviewTab />
               </TabsContent>
-              <TabsContent value="agencies" className="mt-0">
+              <TabsContent value="agencies" className="mt-0 animate-fade-in">
                 <AgenciesTab />
               </TabsContent>
-              <TabsContent value="properties" className="mt-0">
+              <TabsContent value="properties" className="mt-0 animate-fade-in">
                 <PropertiesTab />
               </TabsContent>
-              <TabsContent value="users" className="mt-0">
+              <TabsContent value="users" className="mt-0 animate-fade-in">
                 <UsersTab />
               </TabsContent>
-              <TabsContent value="plans" className="mt-0">
+              <TabsContent value="plans" className="mt-0 animate-fade-in">
                 <PlansTab />
               </TabsContent>
-              <TabsContent value="reports" className="mt-0">
+              <TabsContent value="reports" className="mt-0 animate-fade-in">
                 <ReportsTab />
               </TabsContent>
             </div>
@@ -147,17 +148,43 @@ export function AdminDashboard() {
   );
 }
 
+function AdminTabTrigger({
+  value,
+  icon,
+  children,
+}: {
+  value: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <TabsTrigger
+      value={value}
+      className="gap-1.5 h-11 px-4 text-xs font-medium text-muted-foreground rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none hover:text-foreground hover:bg-muted/40 transition-colors relative"
+    >
+      {icon}
+      {children}
+    </TabsTrigger>
+  );
+}
+
 function AccessDenied({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex-1 grid place-items-center p-6">
-      <div className="flex flex-col items-center text-center max-w-sm">
-        <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 grid place-items-center mb-4">
-          <ShieldOff className="w-7 h-7" />
+      <div className="flex flex-col items-center text-center max-w-sm animate-fade-in">
+        <div className="relative mb-5">
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-rose-500/20 blur-2xl rounded-full"
+          />
+          <div className="relative w-16 h-16 rounded-2xl bg-card border border-rose-500/30 grid place-items-center text-rose-400 shadow-sm">
+            <ShieldOff className="w-7 h-7" />
+          </div>
         </div>
-        <h2 className="text-base font-semibold text-foreground mb-1">
+        <h2 className="text-base font-semibold text-foreground mb-1.5 tracking-tight">
           Acesso restrito a administradores.
         </h2>
-        <p className="text-xs text-muted-foreground mb-4">
+        <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
           Sua conta não tem permissão para acessar o painel administrativo.
           Faça login com uma conta de administrador para continuar.
         </p>

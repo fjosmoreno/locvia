@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, X, Loader2 } from "lucide-react";
+import { Search, MapPin, X, Loader2, Building } from "lucide-react";
 import { useUI } from "@/lib/store";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface GeoResult {
@@ -18,7 +17,9 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [open, setOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(0);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // debounce input
   useEffect(() => {
@@ -42,6 +43,17 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
   const results = data || [];
   const visibleResults = query.trim().length >= 3 ? results : [];
 
+  // fecha ao clicar fora
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
   function pick(r: GeoResult) {
     flyTo(r.lat, r.lng, 15);
     setFilters({ search: undefined });
@@ -52,30 +64,51 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
 
   function submitTextSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (visibleResults.length) pick(visibleResults[0]);
+    if (visibleResults.length) pick(visibleResults[safeActiveIdx] ?? visibleResults[0]);
     else if (query.trim().length >= 3) {
       setFilters({ search: query.trim() });
       setOpen(false);
     }
   }
 
+  // clamp activeIdx dentro dos limites da lista atual
+  const safeActiveIdx = visibleResults.length === 0 ? 0 : Math.min(activeIdx, visibleResults.length - 1);
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open || visibleResults.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIdx((i) => (i + 1) % visibleResults.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIdx((i) => (i - 1 + visibleResults.length) % visibleResults.length);
+    } else if (e.key === "Enter" && visibleResults.length) {
+      e.preventDefault();
+      pick(visibleResults[safeActiveIdx]);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
+  const showEmpty = open && query.trim().length >= 3 && !isFetching && visibleResults.length === 0;
+
   return (
-    <div className="relative w-full">
+    <div ref={containerRef} className="relative w-full">
       <form onSubmit={submitTextSearch} className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setOpen(true)}
-          onBlur={() => {
-            blurTimer.current = setTimeout(() => setOpen(false), 180);
-          }}
+          onKeyDown={onKeyDown}
           placeholder="Buscar bairro, endereço ou cidade"
+          aria-label="Buscar bairro, endereço ou cidade"
           className={cn(
-            "pl-10 pr-9 h-11 rounded-full glass-surface shadow-md border border-border",
-            "placeholder:text-muted-foreground/70 text-sm font-medium focus:bg-secondary"
+            "glass-input w-full pl-10 pr-10 h-11 rounded-full text-sm font-medium",
+            "placeholder:text-muted-foreground/70 outline-none"
           )}
         />
+        {/* Botão limpar — touch target 32px */}
         {query && (
           <button
             type="button"
@@ -84,42 +117,74 @@ export function SearchBar({ onPickResult }: { onPickResult?: () => void }) {
               setDebounced("");
               setFilters({ search: undefined });
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             aria-label="Limpar busca"
           >
             <X className="w-4 h-4" />
           </button>
         )}
-        {isFetching && (
-          <Loader2 className="absolute right-8 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+        {/* Loading spinner */}
+        {isFetching && !query && (
+          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground pointer-events-none" />
+        )}
+        {isFetching && query && (
+          <Loader2 className="absolute right-12 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground pointer-events-none" />
         )}
       </form>
 
+      {/* Dropdown de resultados — premium glass */}
       {open && visibleResults.length > 0 && (
-        <div className="absolute z-[1200] mt-2 w-full bg-card rounded-2xl shadow-xl border border-border overflow-hidden max-h-80 overflow-y-auto scroll-area animate-scale-in">
-          {visibleResults.map((r, i) => (
-            <button
-              key={i}
-              type="button"
-              onMouseDown={() => {
-                if (blurTimer.current) clearTimeout(blurTimer.current);
-                pick(r);
-              }}
-              className="w-full text-left px-4 py-2.5 hover:bg-accent/60 flex items-start gap-3 border-b border-border/50 last:border-0 transition-colors"
-            >
-              <div className="w-7 h-7 rounded-lg bg-primary/10 grid place-items-center text-primary shrink-0 mt-0.5">
-                <MapPin className="w-3.5 h-3.5" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-foreground clamp-1">
-                  {r.displayName.split(",")[0]}
+        <div className="search-dropdown absolute z-[1200] mt-2 w-full max-h-80 overflow-y-auto overlay-scroll animate-scale-in">
+          {visibleResults.map((r, i) => {
+            const parts = r.displayName.split(",");
+            const title = parts[0];
+            const subtitle = parts.slice(1).join(",").trim();
+            return (
+              <button
+                key={i}
+                type="button"
+                onMouseEnter={() => setActiveIdx(i)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (blurTimer.current) clearTimeout(blurTimer.current);
+                  pick(r);
+                }}
+                className={cn(
+                  "search-dropdown-item w-full text-left",
+                  safeActiveIdx === i && "is-active"
+                )}
+              >
+                <div className="pin-badge">
+                  <MapPin className="w-3.5 h-3.5" />
                 </div>
-                <div className="text-xs text-muted-foreground clamp-1">
-                  {r.displayName.split(",").slice(1).join(",").trim()}
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-foreground clamp-1">
+                    {title}
+                  </div>
+                  {subtitle && (
+                    <div className="text-xs text-muted-foreground clamp-1">
+                      {subtitle}
+                    </div>
+                  )}
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Estado vazio */}
+      {showEmpty && (
+        <div className="search-dropdown absolute z-[1200] mt-2 w-full animate-scale-in p-4">
+          <div className="flex flex-col items-center text-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-muted grid place-items-center text-muted-foreground">
+              <Building className="w-5 h-5" />
+            </div>
+            <div className="text-sm font-medium text-foreground">Nenhum local encontrado</div>
+            <div className="text-xs text-muted-foreground">
+              Tente buscar por um bairro, rua ou CEP.
+            </div>
+          </div>
         </div>
       )}
     </div>

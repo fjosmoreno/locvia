@@ -53,6 +53,7 @@ export function MapControls() {
         onClick={() => map?.zoomIn({ duration: 300 })}
         className="map-overlay-btn"
         aria-label="Aproximar"
+        title="Aproximar"
       >
         <Plus className="w-5 h-5" strokeWidth={2.4} />
       </button>
@@ -60,6 +61,7 @@ export function MapControls() {
         onClick={() => map?.zoomOut({ duration: 300 })}
         className="map-overlay-btn"
         aria-label="Afastar"
+        title="Afastar"
       >
         <Minus className="w-5 h-5" strokeWidth={2.4} />
       </button>
@@ -68,9 +70,11 @@ export function MapControls() {
         className={cn(
           "map-overlay-btn relative",
           status === "success" && "is-active",
-          status === "denied" && "text-destructive hover:!bg-destructive/10"
+          status === "requesting" && "is-requesting",
+          status === "denied" && "is-error"
         )}
         aria-label="Minha localização"
+        aria-pressed={status === "success"}
         title={
           status === "requesting"
             ? "Localizando…"
@@ -82,11 +86,13 @@ export function MapControls() {
         }
       >
         {status === "requesting" ? (
-          <Loader2 className="w-4.5 h-4.5 animate-spin" />
+          <Loader2 className="w-[18px] h-[18px] animate-spin" />
         ) : status === "denied" ? (
-          <AlertCircle className="w-4.5 h-4.5" />
+          <AlertCircle className="w-[18px] h-[18px]" />
+        ) : status === "success" ? (
+          <LocateFixed className="w-[18px] h-[18px]" strokeWidth={2.6} />
         ) : (
-          <LocateFixed className="w-4.5 h-4.5" />
+          <LocateFixed className="w-[18px] h-[18px]" />
         )}
       </button>
     </div>
