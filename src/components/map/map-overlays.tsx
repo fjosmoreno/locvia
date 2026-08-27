@@ -2,17 +2,18 @@
 
 import { useEffect, useRef } from "react";
 import { useMap } from "react-map-gl/maplibre";
-import { Plus, Minus, LocateFixed, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { Plus, Minus, LocateFixed, Loader2, RefreshCw, AlertCircle, Home } from "lucide-react";
 import { useUI } from "@/lib/store";
 import { useUserLocation } from "@/hooks/use-geolocation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-/** Controles de zoom + localizar — overlay premium com estados. */
+/** Controles de zoom + localizar + restaurar posição — overlay premium com estados. */
 export function MapControls() {
   const { current: map } = useMap();
   const { status, request, message, location } = useUserLocation();
+  const { resetMap } = useUI();
   const lastErrorStatus = useRef<string | null>(null);
 
   useEffect(() => {
@@ -47,8 +48,14 @@ export function MapControls() {
     request();
   }
 
+  function handleReset() {
+    // Restaura posição inicial (localização do usuário ou centro default BH)
+    resetMap();
+    toast.success("Posição inicial restaurada", { duration: 1800 });
+  }
+
   return (
-    <div className="absolute right-3 bottom-8 z-[1000] flex flex-col gap-2 pointer-events-auto">
+    <div className="absolute right-3 bottom-8 z-[1000] flex flex-col gap-2 pointer-events-auto md:bottom-8">
       <button
         onClick={() => map?.zoomIn({ duration: 300 })}
         className="map-overlay-btn"
@@ -95,6 +102,15 @@ export function MapControls() {
           <LocateFixed className="w-[18px] h-[18px]" />
         )}
       </button>
+      {/* Restaurar posição inicial do mapa */}
+      <button
+        onClick={handleReset}
+        className="map-overlay-btn"
+        aria-label="Restaurar posição inicial"
+        title="Restaurar posição inicial do mapa"
+      >
+        <Home className="w-[18px] h-[18px]" strokeWidth={2.2} />
+      </button>
     </div>
   );
 }
@@ -110,7 +126,7 @@ export function SearchInAreaPrompt() {
   }
 
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 bottom-8 z-[1000] pointer-events-none">
+    <div className="absolute left-1/2 -translate-x-1/2 bottom-8 z-[1000] pointer-events-none md:bottom-8">
       <button
         onClick={refetch}
         className="search-area-btn pointer-events-auto animate-scale-in"

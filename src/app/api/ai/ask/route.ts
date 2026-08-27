@@ -145,9 +145,15 @@ export async function POST(req: NextRequest) {
     const serialized = await Promise.all(props.map((p) => serializeProperty(p, origin)));
     if (origin) serialized.sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
 
-    // 4. Se a IA extraiu bairro/cidade, tenta geocode para sugerir flyTo
+    // 4. Define flyTo: PRIORIZA o centro dos imóveis encontrados (mais preciso que geocode)
     let flyTo: AiResponse["flyTo"] = undefined;
-    if (filters.search && !origin) {
+    if (serialized.length > 0) {
+      // centro geográfico dos imóveis retornados
+      const avgLat = serialized.reduce((s, p) => s + p.latitude, 0) / serialized.length;
+      const avgLng = serialized.reduce((s, p) => s + p.longitude, 0) / serialized.length;
+      flyTo = { lat: avgLat, lng: avgLng, zoom: 14 };
+    } else if (filters.search && !origin) {
+      // fallback: geocode do texto de busca (pode ser impreciso)
       try {
         const geoRes = await fetch(
           `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=BR&q=${encodeURIComponent(

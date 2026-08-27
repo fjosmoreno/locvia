@@ -141,6 +141,8 @@ interface UIState {
   setPropertiesError: (e: string | null) => void;
   flyTo: (lat: number, lng: number, zoom?: number) => void;
   flyToTarget: { lat: number; lng: number; zoom?: number; nonce: number } | null;
+  // Restaura posição inicial do mapa (localização do usuário ou centro default)
+  resetMap: () => void;
 }
 
 const DEFAULT_FILTERS: Filters = {
@@ -439,4 +441,13 @@ export const useUI = create<UIState>((set, get) => ({
 
   flyTo: (lat, lng, zoom) =>
     set((s) => ({ flyToTarget: { lat, lng, zoom, nonce: Date.now() } })),
+
+  resetMap: () => {
+    // Restaura para a localização do usuário (se disponível) ou centro default
+    const { userLocation } = get();
+    const target = userLocation
+      ? { lat: userLocation.lat, lng: userLocation.lng, zoom: 15 }
+      : { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng, zoom: DEFAULT_ZOOM };
+    set({ flyToTarget: { ...target, nonce: Date.now() } });
+  },
 }));

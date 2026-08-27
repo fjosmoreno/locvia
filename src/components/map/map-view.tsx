@@ -129,7 +129,7 @@ function UserMarker() {
 
 // ---------- Cluster manager ----------
 
-function useCluster(properties: Property[]) {
+function useCluster(properties: Property[], mapRef: React.RefObject<MLMap | null>) {
   const scRef = useRef<Supercluster | null>(null);
   const [clusters, setClusters] = useState<any[]>([]);
   const lastView = useRef<{ bbox: [number, number, number, number] | null; zoom: number }>({
@@ -146,12 +146,18 @@ function useCluster(properties: Property[]) {
     }));
     scRef.current = new Supercluster({ radius: 56, maxZoom: 16 });
     scRef.current.load(points as any);
-    // re-update com viewState atual
-    const { bbox, zoom } = lastView.current;
-    if (bbox && scRef.current) {
-      setClusters(scRef.current.getClusters(bbox, Math.floor(zoom)));
+    // re-update com bbox ATUAL do mapa (não o lastView que pode estar desatualizado)
+    if (mapRef.current) {
+      const b = mapRef.current.getBounds();
+      const bbox: [number, number, number, number] = [
+        b.getWest(), b.getSouth(), b.getEast(), b.getNorth(),
+      ];
+      lastView.current = { bbox, zoom: mapRef.current.getZoom() };
+      setClusters(scRef.current.getClusters(bbox, Math.floor(mapRef.current.getZoom())));
+    } else if (lastView.current.bbox) {
+      setClusters(scRef.current.getClusters(lastView.current.bbox, Math.floor(lastView.current.zoom)));
     }
-  }, [properties]);
+  }, [properties, mapRef]);
 
   const updateClusters = useCallback(
     (bbox: [number, number, number, number], zoom: number) => {
@@ -233,7 +239,7 @@ export default function MapView() {
     return () => clearTimeout(t);
   }, [request]);
 
-  const { clusters, updateClusters, expandCluster } = useCluster(properties);
+  const { clusters, updateClusters, expandCluster } = useCluster(properties, mapRef);
 
   // Carrega o estilo do mapa (com fallback MapTiler → raster CARTO Voyager)
   const [mapStyle, setMapStyle] = useState<any>(FALLBACK_STYLE);
@@ -305,13 +311,14 @@ export default function MapView() {
   // Sempre que properties mudam, atualiza clusters (com bbox atual ou default BH)
   useEffect(() => {
     if (mapRef.current) {
-      updateFromMap();
+      // Pequeno delay para garantir que o mapa terminou de mover (flyTo da IA)
+      const raf = requestAnimationFrame(() => {
+        if (mapRef.current) updateFromMap();
+      });
+      return () => cancelAnimationFrame(raf);
     } else {
       // mapa ainda não carregou — updateClusters com bbox amplo para mostrar todos
-      updateClusters(
-        [-180, -90, 180, 90],
-        10
-      );
+      updateClusters([-180, -90, 180, 90], 10);
     }
   }, [properties, updateFromMap, updateClusters]);
 
