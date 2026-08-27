@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export function MapControls() {
   const { current: map } = useMap();
   const { status, request, message, location } = useUserLocation();
-  const { resetMap } = useUI();
+  const { resetMap, drawer } = useUI();
   const lastErrorStatus = useRef<string | null>(null);
 
   useEffect(() => {
@@ -53,6 +53,9 @@ export function MapControls() {
     resetMap();
     toast.success("Posição inicial restaurada", { duration: 1800 });
   }
+
+  // Esconde quando um drawer/sheet está aberto (admin, agency, favorites, etc.)
+  if (drawer) return null;
 
   return (
     <div className="absolute right-3 bottom-8 z-[1000] flex flex-col gap-2 pointer-events-auto md:bottom-8">
@@ -117,9 +120,9 @@ export function MapControls() {
 
 /** Botão flutuante "Pesquisar nesta área" — aparece ao mover o mapa. */
 export function SearchInAreaPrompt() {
-  const { searchInAreaPrompt, loadingProperties } = useUI();
+  const { searchInAreaPrompt, loadingProperties, drawer } = useUI();
   const qc = useQueryClient();
-  if (!searchInAreaPrompt) return null;
+  if (!searchInAreaPrompt || drawer) return null;
 
   function refetch() {
     qc.invalidateQueries({ queryKey: ["properties"] });

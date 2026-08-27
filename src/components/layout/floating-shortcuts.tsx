@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
  */
 export function FloatingShortcuts() {
   const { data: session } = useSession();
-  const { openDrawer, compareIds } = useUI();
+  const { openDrawer, compareIds, drawer } = useUI();
 
   // count de favoritos
   const { data: favCount = 0 } = useQuery<number>({
@@ -45,6 +45,8 @@ export function FloatingShortcuts() {
     staleTime: 60_000,
   });
 
+  // Esconde quando um drawer/sheet está aberto
+  if (drawer) return null;
   if (!session && compareIds.length === 0) return null;
 
   return (

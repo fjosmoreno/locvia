@@ -71,6 +71,7 @@ export function AgenciesTab() {
 
   const { data, isLoading, isError, refetch } = useQuery<{ agencies: AgencyAdmin[] }>({
     queryKey: ["admin", "agencies", filter],
+    staleTime: 0,
     queryFn: async () => {
       const url =
         filter === "ALL"

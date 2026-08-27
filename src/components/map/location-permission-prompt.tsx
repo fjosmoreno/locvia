@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUserLocation } from "@/hooks/use-geolocation";
+import { useUI } from "@/lib/store";
 
 /**
  * Card flutuante de geolocalização — só aparece em estado de FALHA
@@ -15,6 +16,7 @@ import { useUserLocation } from "@/hooks/use-geolocation";
  */
 export function LocationPermissionPrompt() {
   const { status, request, message } = useUserLocation();
+  const { drawer } = useUI();
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
 
   const failed =
@@ -23,7 +25,7 @@ export function LocationPermissionPrompt() {
     status === "error" ||
     status === "unavailable";
 
-  const visible = failed && dismissedFor !== status;
+  const visible = failed && dismissedFor !== status && !drawer;
   if (!visible) return null;
 
   function dismiss() {

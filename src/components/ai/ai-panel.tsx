@@ -25,6 +25,7 @@ export function AiPanel() {
     clearAi,
     userLocation,
     flyTo,
+    drawer,
   } = useUI();
 
   const [input, setInput] = useState("");
@@ -36,6 +37,9 @@ export function AiPanel() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [ai.messages, ai.loading]);
+
+  // Esconde quando um drawer/sheet está aberto
+  if (drawer) return null;
 
   async function ask(text: string) {
     const message = text.trim();

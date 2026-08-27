@@ -23,7 +23,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 
 export function FilterChips() {
   const {
-    filters, setFilters, resetFilters, openDrawer, userLocation,
+    filters, setFilters, resetFilters, openDrawer, userLocation, drawer,
   } = useUI();
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -64,6 +64,9 @@ export function FilterChips() {
       : [...filters.propertyTypes, t];
     setFilters({ propertyTypes: next });
   }
+
+  // Esconde quando um drawer/sheet está aberto
+  if (drawer) return null;
 
   return (
     <div className="absolute top-[64px] sm:top-[72px] left-3 right-3 z-[1050] pointer-events-none">

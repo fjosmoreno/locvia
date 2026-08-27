@@ -29,6 +29,7 @@ export function RoutePanel() {
     clearRoute,
     userLocation,
     flyTo,
+    drawer,
   } = useUI();
   const { status: locStatus, request: requestLocation } = useUserLocation();
 
@@ -77,6 +78,9 @@ export function RoutePanel() {
     if (showResults) document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showResults]);
+
+  // Esconde quando um drawer/sheet está aberto
+  if (drawer) return null;
 
   // Estado fechado — botão flutuante "LOCVIA ROUTE"
   if (!route.open) {
