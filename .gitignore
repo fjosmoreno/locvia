@@ -22,6 +22,8 @@ node_modules
 
 # misc
 .DS_Store
+# macOS AppleDouble metadata (HD externo LovonHD)
+._*
 *.pem
 
 # debug
@@ -29,6 +31,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+# projeto não usa Bun
+bun.lock
+bun.lockb
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -50,5 +55,20 @@ test
 prompt
 
 server.log
+
 # Skills directory
 /skills/
+
+# Artefatos locais (não são código)
+# saídas de ferramentas (read/bash txt)
+/tool-results/
+# uploads temporários (screenshots do user)
+/upload/
+# SQLite dev (custom.db, dev.db, etc)
+db/*.db
+db/*.sqlite
+db/*.sqlite3
+# log interno de desenvolvimento
+worklog.md
+# anotações locais do user
+local-*.md
