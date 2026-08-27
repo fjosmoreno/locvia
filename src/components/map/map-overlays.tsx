@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useMap } from "react-leaflet";
+import { useMap } from "react-map-gl/maplibre";
 import { Plus, Minus, LocateFixed, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { useUI } from "@/lib/store";
 import { useUserLocation } from "@/hooks/use-geolocation";
@@ -11,11 +11,10 @@ import { cn } from "@/lib/utils";
 
 /** Controles de zoom + localizar — overlay premium com estados. */
 export function MapControls() {
-  const map = useMap();
+  const { current: map } = useMap();
   const { status, request, message, location } = useUserLocation();
   const lastErrorStatus = useRef<string | null>(null);
 
-  // Feedback de erro via toast quando status muda para falha (uma vez por mudança)
   useEffect(() => {
     const failed = ["denied", "timeout", "error", "unavailable"];
     if (failed.includes(status) && lastErrorStatus.current !== status) {
@@ -36,9 +35,13 @@ export function MapControls() {
 
   function handleLocate() {
     if (status === "requesting") return;
-    // Se já localizado, apenas recentraliza
-    if (status === "success" && location) {
-      map.flyTo([location.lat, location.lng], 15, { duration: 0.8 });
+    if (status === "success" && location && map) {
+      map.flyTo({
+        center: [location.lng, location.lat],
+        zoom: 15,
+        duration: 800,
+        essential: true,
+      });
       return;
     }
     request();
@@ -47,14 +50,14 @@ export function MapControls() {
   return (
     <div className="absolute right-3 bottom-8 z-[1000] flex flex-col gap-2 pointer-events-auto">
       <button
-        onClick={() => map.zoomIn()}
+        onClick={() => map?.zoomIn({ duration: 300 })}
         className="map-overlay-btn"
         aria-label="Aproximar"
       >
         <Plus className="w-5 h-5" strokeWidth={2.4} />
       </button>
       <button
-        onClick={() => map.zoomOut()}
+        onClick={() => map?.zoomOut({ duration: 300 })}
         className="map-overlay-btn"
         aria-label="Afastar"
       >
@@ -109,7 +112,7 @@ export function SearchInAreaPrompt() {
         {loadingProperties ? (
           <span className="ring" />
         ) : (
-          <RefreshCw className="w-3.5 h-3.5 text-primary" />
+          <RefreshCw className="w-3.5 h-3.5" />
         )}
         {loadingProperties ? "Atualizando…" : "Pesquisar nesta área"}
       </button>

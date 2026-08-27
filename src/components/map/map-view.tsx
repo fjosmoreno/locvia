@@ -1,18 +1,10 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import { useEffect, useMemo, useRef } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  useMap,
-  useMapEvents,
-  Circle,
-  Polyline,
-} from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Map, { Marker, Source, Layer } from "react-map-gl/maplibre";
+import Supercluster from "supercluster";
+import type { Map as MLMap, MapboxMouseEvent } from "maplibre-gl";
 import { useUI } from "@/lib/store";
 import { useProperties } from "@/hooks/use-properties";
 import { useUserLocation } from "@/hooks/use-geolocation";
@@ -21,104 +13,151 @@ import { DEFAULT_CENTER, DEFAULT_ZOOM } from "@/lib/constants";
 import { MapControls, SearchInAreaPrompt } from "@/components/map/map-overlays";
 import type { Property } from "@/lib/types";
 
-// ---------- Ícones ----------
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || "";
 
-function priceIcon(p: Property, selected: boolean) {
-  const featuredCls = p.featured ? " is-featured" : "";
-  const selectedCls = selected ? " is-selected" : "";
-  const badge = p.featured ? '<span class="badge-dot"></span>' : "";
-  const label = formatPrice(p.price, p.purpose);
-  return L.divIcon({
-    html: `<div class="marker-wrap"><div class="price-marker${featuredCls}${selectedCls}">${badge}<span>${label}</span></div></div>`,
-    className: "",
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
-  });
+/**
+ * Estilo do mapa — estratégia com fallback:
+ * 1. MapTiler "basic" (estilo claro premium da imagem de referência) se a chave funcionar
+ * 2. Fallback: CARTO Voyager (vector tiles, claro, ruas coloridas — estilo similar, grátis)
+ *
+ * Para ativar o MapTiler premium, configure a chave no painel MapTiler permitindo:
+ * - Domain: localhost, locvia.vercel.app (e seu domínio de produção)
+ * - APIs: Vector Tiles, Styles
+ */
+const MAPTILER_STYLE = `https://api.maptiler.com/maps/basic/style.json?key=${MAPTILER_KEY}`;
+const FALLBACK_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+
+// Detecta se a chave MapTiler funciona (cacheado após primeira tentativa)
+let maptilerChecked = false;
+let maptilerOk = false;
+
+async function getMapStyle(): Promise<string> {
+  if (!MAPTILER_KEY) return FALLBACK_STYLE;
+  if (maptilerChecked) return maptilerOk ? MAPTILER_STYLE : FALLBACK_STYLE;
+  try {
+    const res = await fetch(MAPTILER_STYLE, { method: "GET" });
+    if (!res.ok) {
+      maptilerOk = false;
+      maptilerChecked = true;
+      console.warn("[LOCVIA] MapTiler key rejected (403). Usando fallback CARTO Voyager. Configure o domínio no painel MapTiler.");
+      return FALLBACK_STYLE;
+    }
+    // Valida que a resposta é um style.json válido (tem version)
+    const data = await res.json();
+    if (!data || typeof data.version !== "number") {
+      maptilerOk = false;
+      maptilerChecked = true;
+      return FALLBACK_STYLE;
+    }
+    maptilerOk = true;
+    maptilerChecked = true;
+    return MAPTILER_STYLE;
+  } catch {
+    maptilerOk = false;
+    maptilerChecked = true;
+    return FALLBACK_STYLE;
+  }
 }
 
-function clusterIcon(cluster: any) {
-  const count = cluster.getChildCount();
-  const size = count < 10 ? 40 : count < 30 ? 46 : 54;
-  return L.divIcon({
-    html: `<div class="marker-cluster" style="width:${size}px;height:${size}px"><span>${count}</span></div>`,
-    className: "",
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  });
+// ---------- Marcador de preço ----------
+
+function PriceMarker({
+  property,
+  selected,
+  onClick,
+}: {
+  property: Property;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const featured = property.featured;
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={`price-marker${featured ? " is-featured" : ""}${selected ? " is-selected" : ""}`}
+      aria-label={property.title}
+    >
+      {featured && <span className="badge-dot" />}
+      <span>{formatPrice(property.price, property.purpose)}</span>
+    </button>
+  );
 }
 
-function userIcon() {
-  return L.divIcon({
-    html: `<div class="user-marker"><div class="pulse"></div><div class="dot"></div></div>`,
-    className: "",
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-  });
+function UserMarker() {
+  return (
+    <div className="user-marker">
+      <div className="pulse" />
+      <div className="dot" />
+    </div>
+  );
 }
 
-// ---------- Controladores ----------
+// ---------- Cluster manager ----------
 
-function MapController() {
-  const map = useMap();
-  const flyToTarget = useUI((s) => s.flyToTarget);
+function useCluster(properties: Property[]) {
+  const scRef = useRef<Supercluster | null>(null);
+  const [clusters, setClusters] = useState<any[]>([]);
+  const lastView = useRef<{ bbox: [number, number, number, number] | null; zoom: number }>({
+    bbox: null,
+    zoom: 0,
+  });
 
+  // indexa imóveis no supercluster
   useEffect(() => {
-    if (!flyToTarget) return;
-    map.flyTo([flyToTarget.lat, flyToTarget.lng], flyToTarget.zoom ?? map.getZoom(), {
-      duration: 0.85,
-      easeLinearity: 0.25,
+    const points = properties.map((p) => ({
+      type: "Feature" as const,
+      geometry: { type: "Point" as const, coordinates: [p.longitude, p.latitude] as [number, number] },
+      properties: { cluster: false, propertyId: p.id, property: p },
+    }));
+    scRef.current = new Supercluster({ radius: 56, maxZoom: 16 });
+    scRef.current.load(points as any);
+    // re-update com viewState atual
+    const { bbox, zoom } = lastView.current;
+    if (bbox && scRef.current) {
+      setClusters(scRef.current.getClusters(bbox, Math.floor(zoom)));
+    }
+  }, [properties]);
+
+  const updateClusters = useCallback(
+    (bbox: [number, number, number, number], zoom: number) => {
+      lastView.current = { bbox, zoom };
+      if (scRef.current) {
+        setClusters(scRef.current.getClusters(bbox, Math.floor(zoom)));
+      }
+    },
+    []
+  );
+
+  const expandCluster = useCallback((clusterId: number) => {
+    if (scRef.current) {
+      return scRef.current.getClusterExpansionZoom(clusterId);
+    }
+    return null;
+  }, []);
+
+  return { clusters, updateClusters, expandCluster };
+}
+
+// ---------- Controller (flyTo) ----------
+
+function MapController({ mapRef }: { mapRef: React.RefObject<MLMap | null> }) {
+  const flyToTarget = useUI((s) => s.flyToTarget);
+  useEffect(() => {
+    if (!mapRef.current || !flyToTarget) return;
+    mapRef.current.flyTo({
+      center: [flyToTarget.lng, flyToTarget.lat],
+      zoom: flyToTarget.zoom ?? mapRef.current.getZoom(),
+      duration: 850,
+      essential: true,
     });
-  }, [flyToTarget, map]);
-
+  }, [flyToTarget, mapRef]);
   return null;
 }
 
-function MapEvents() {
-  const setMapBbox = useUI((s) => s.setMapBbox);
-  const setMapCenter = useUI((s) => s.setMapCenter);
-  const setExploreView = useUI((s) => s.setExploreView);
-  const setSearchInAreaPrompt = useUI((s) => s.setSearchInAreaPrompt);
-  const panelView = useUI((s) => s.panelView);
-
-  const map = useMapEvents({
-    move: () => setSearchInAreaPrompt(true),
-    moveend: () => {
-      const b = map.getBounds();
-      const c = map.getCenter();
-      const z = map.getZoom();
-      setMapBbox({
-        minLat: b.getSouth(),
-        maxLat: b.getNorth(),
-        minLng: b.getWest(),
-        maxLng: b.getEast(),
-      });
-      setMapCenter({ lat: c.lat, lng: c.lng });
-      // Preserva a visão de EXPLORAÇÃO apenas quando não está visualizando um imóvel
-      // (durante detalhe, o mapa voou para o imóvel — não deve sobrescrever o returnView)
-      if (panelView !== "detail") {
-        setExploreView({ lat: c.lat, lng: c.lng, zoom: z });
-      }
-      window.setTimeout(() => setSearchInAreaPrompt(false), 800);
-    },
-    zoomend: () => {
-      const b = map.getBounds();
-      const c = map.getCenter();
-      const z = map.getZoom();
-      setMapBbox({
-        minLat: b.getSouth(),
-        maxLat: b.getNorth(),
-        minLng: b.getWest(),
-        maxLng: b.getEast(),
-      });
-      if (panelView !== "detail") {
-        setExploreView({ lat: c.lat, lng: c.lng, zoom: z });
-      }
-    },
-  });
-  return null;
-}
-
-// ---------- Componente ----------
+// ---------- Componente principal ----------
 
 export default function MapView() {
   const {
@@ -129,11 +168,17 @@ export default function MapView() {
     setProperties,
     setLoadingProperties,
     setPropertiesError,
+    setMapBbox,
+    setMapCenter,
+    setExploreView,
+    setSearchInAreaPrompt,
+    panelView,
     exploreView,
   } = useUI();
 
   const { request } = useUserLocation();
   const didAutoRequest = useRef(false);
+  const mapRef = useRef<MLMap | null>(null);
 
   const query = useProperties(true);
 
@@ -145,169 +190,281 @@ export default function MapView() {
     }
     if (query.isError) setPropertiesError("Não conseguimos carregar os imóveis desta região.");
   }, [
-    query.data,
-    query.isLoading,
-    query.isFetching,
-    query.isError,
-    setProperties,
-    setLoadingProperties,
-    setPropertiesError,
+    query.data, query.isLoading, query.isFetching, query.isError,
+    setProperties, setLoadingProperties, setPropertiesError,
   ]);
 
-  // Auto-request de localização na primeira entrada (uma única vez)
   useEffect(() => {
     if (didAutoRequest.current) return;
     didAutoRequest.current = true;
-    // Pequeno delay para o mapa montar antes de solicitar (evita race no iOS)
     const t = setTimeout(() => request(), 400);
     return () => clearTimeout(t);
   }, [request]);
+
+  const { clusters, updateClusters, expandCluster } = useCluster(properties);
+
+  // Carrega o estilo do mapa (com fallback MapTiler → CARTO Voyager)
+  const [mapStyle, setMapStyle] = useState<string>(FALLBACK_STYLE);
+  useEffect(() => {
+    let mounted = true;
+    getMapStyle().then((s) => {
+      if (mounted) setMapStyle(s);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const [viewState, setViewState] = useState({
+    longitude: exploreView?.lng ?? DEFAULT_CENTER.lng,
+    latitude: exploreView?.lat ?? DEFAULT_CENTER.lat,
+    zoom: exploreView?.zoom ?? DEFAULT_ZOOM,
+    bearing: 0,
+    pitch: 0,
+  });
+
+  const onMove = useCallback((evt: any) => {
+    setViewState(evt.viewState);
+    setSearchInAreaPrompt(true);
+  }, [setSearchInAreaPrompt]);
+
+  const onMoveEnd = useCallback(
+    (evt: any) => {
+      const map = evt.target as MLMap;
+      const b = map.getBounds();
+      setMapBbox({
+        minLat: b.getSouth(),
+        maxLat: b.getNorth(),
+        minLng: b.getWest(),
+        maxLng: b.getEast(),
+      });
+      const c = map.getCenter();
+      const z = map.getZoom();
+      setMapCenter({ lat: c.lat, lng: c.lng });
+      if (panelView !== "detail") {
+        setExploreView({ lat: c.lat, lng: c.lng, zoom: z });
+      }
+      updateClusters(
+        [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()],
+        z
+      );
+      window.setTimeout(() => setSearchInAreaPrompt(false), 800);
+    },
+    [panelView, setMapBbox, setMapCenter, setExploreView, updateClusters, setSearchInAreaPrompt]
+  );
+
+  // update clusters quando properties mudam OU quando o mapa carrega
+  const updateFromMap = useCallback(() => {
+    if (mapRef.current) {
+      const b = mapRef.current.getBounds();
+      const bbox: [number, number, number, number] = [
+        b.getWest(), b.getSouth(), b.getEast(), b.getNorth(),
+      ];
+      setMapBbox({
+        minLat: b.getSouth(),
+        maxLat: b.getNorth(),
+        minLng: b.getWest(),
+        maxLng: b.getEast(),
+      });
+      updateClusters(bbox, mapRef.current.getZoom());
+    }
+  }, [updateClusters, setMapBbox]);
+
+  // Sempre que properties mudam, atualiza clusters (com bbox atual ou default BH)
+  useEffect(() => {
+    if (mapRef.current) {
+      updateFromMap();
+    } else {
+      // mapa ainda não carregou — updateClusters com bbox amplo para mostrar todos
+      updateClusters(
+        [-180, -90, 180, 90],
+        10
+      );
+    }
+  }, [properties, updateFromMap, updateClusters]);
 
   const selectedProperty = useMemo(
     () => properties.find((p) => p.id === selectedPropertyId) || null,
     [properties, selectedPropertyId]
   );
 
-  // Centro/zoom iniciais: restaura da memória (sessionStorage) ou padrão
-  const initialCenter: [number, number] = exploreView
-    ? [exploreView.lat, exploreView.lng]
-    : [DEFAULT_CENTER.lat, DEFAULT_CENTER.lng];
-  const initialZoom = exploreView?.zoom ?? DEFAULT_ZOOM;
-
   return (
-    <MapContainer
-      center={initialCenter}
-      zoom={initialZoom}
-      zoomControl={false}
-      className="h-full w-full"
-      preferCanvas
-      zoomSnap={0.5}
-      wheelPxPerZoomLevel={120}
-    >
-      {/* Positron — canvas minimalista premium */}
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        subdomains="abcd"
+    <div className="absolute inset-0">
+      <Map
+        {...viewState}
+        onMove={onMove}
+        onMoveEnd={onMoveEnd}
+        onLoad={updateFromMap}
+        mapStyle={mapStyle}
+        ref={mapRef as any}
         maxZoom={20}
-      />
-
-      <MapController />
-      <MapEvents />
-      <MapControls />
-      <SearchInAreaPrompt />
-
-      <MarkerClusterGroup
-        iconCreateFunction={clusterIcon}
-        showCoverageOnHover={false}
-        spiderfyOnMaxZoom
-        maxClusterRadius={56}
-        chunkedLoading
-        animate
+        minZoom={3}
+        attributionControl={{ compact: true }}
       >
-        {properties.map((p) => {
+        <MapController mapRef={mapRef} />
+        <MapControls />
+        <SearchInAreaPrompt />
+
+        {/* Marcadores (clusters + individuais) */}
+        {clusters.map((cluster: any) => {
+          const [lng, lat] = cluster.geometry.coordinates;
+          if (cluster.properties.cluster) {
+            const count = cluster.properties.point_count;
+            const size = count < 10 ? 40 : count < 30 ? 46 : 54;
+            return (
+              <Marker
+                key={`cluster-${cluster.id}`}
+                longitude={lng}
+                latitude={lat}
+                onClick={(e: MapboxMouseEvent) => {
+                  e.stopPropagation();
+                  const z = expandCluster(cluster.id);
+                  if (z != null && mapRef.current) {
+                    mapRef.current.flyTo({
+                      center: [lng, lat],
+                      zoom: z,
+                      duration: 600,
+                    });
+                  }
+                }}
+                anchor="center"
+              >
+                <div className="marker-cluster" style={{ width: size, height: size }}>
+                  <span>{count}</span>
+                </div>
+              </Marker>
+            );
+          }
+          const p = cluster.properties.property as Property;
           const isSelected = p.id === selectedPropertyId;
           return (
             <Marker
               key={p.id}
-              position={[p.latitude, p.longitude]}
-              icon={priceIcon(p, isSelected)}
-              zIndexOffset={isSelected ? 1100 : p.featured ? 500 : 0}
-              eventHandlers={{ click: () => openProperty(p) }}
-            />
+              longitude={lng}
+              latitude={lat}
+              anchor="center"
+            >
+              <PriceMarker property={p} selected={isSelected} onClick={() => openProperty(p)} />
+            </Marker>
           );
         })}
-      </MarkerClusterGroup>
 
-      {userLocation && (
-        <>
+        {/* Marcador do usuário */}
+        {userLocation && (
+          <>
+            <Marker longitude={userLocation.lng} latitude={userLocation.lat} anchor="center">
+              <UserMarker />
+            </Marker>
+            {userLocation.accuracy && userLocation.accuracy < 500 && (
+              <Source
+                id="user-accuracy"
+                type="geojson"
+                data={{
+                  type: "Feature",
+                  geometry: {
+                    type: "Polygon",
+                    coordinates: [circleCoords(userLocation.lat, userLocation.lng, userLocation.accuracy)],
+                  },
+                }}
+              >
+                <Layer
+                  type="fill"
+                  paint={{ "fill-color": "#00D4FF", "fill-opacity": 0.08 }}
+                />
+              </Source>
+            )}
+          </>
+        )}
+
+        {/* Imóvel selecionado não na lista atual */}
+        {selectedProperty && !properties.find((p) => p.id === selectedProperty.id) && (
           <Marker
-            position={[userLocation.lat, userLocation.lng]}
-            icon={userIcon()}
-            zIndexOffset={2000}
-          />
-          {userLocation.accuracy && userLocation.accuracy < 500 && (
-            <Circle
-              center={[userLocation.lat, userLocation.lng]}
-              radius={userLocation.accuracy}
-              pathOptions={{
-                color: "var(--primary)",
-                fillColor: "var(--primary)",
-                fillOpacity: 0.06,
-                weight: 1,
-                opacity: 0.3,
-              }}
-            />
-          )}
-        </>
-      )}
+            longitude={selectedProperty.longitude}
+            latitude={selectedProperty.latitude}
+            anchor="center"
+          >
+            <PriceMarker property={selectedProperty} selected onClick={() => openProperty(selectedProperty)} />
+          </Marker>
+        )}
 
-      {selectedProperty && !properties.find((p) => p.id === selectedProperty.id) && (
-        <Marker
-          position={[selectedProperty.latitude, selectedProperty.longitude]}
-          icon={priceIcon(selectedProperty, true)}
-          zIndexOffset={1500}
-        />
-      )}
-
-      {/* Rota LOCVIA ROUTE — polyline + marcadores origem/destino */}
-      <RouteLayer />
-    </MapContainer>
+        <RouteLayer />
+      </Map>
+    </div>
   );
 }
 
-/** Camada da rota: polyline ciano + marcadores A (origem) e B (destino). */
+// ---------- Route Layer ----------
 function RouteLayer() {
   const { route } = useUI();
   if (!route.route || route.route.length < 2) return null;
 
-  const positions = route.route.map((p) => [p.lat, p.lng]) as [number, number][];
+  const coords = route.route.map((p) => [p.lng, p.lat]) as [number, number][];
+  const geojson = {
+    type: "Feature",
+    geometry: { type: "LineString", coordinates: coords },
+  };
+
   return (
     <>
-      <Polyline
-        positions={positions}
-        pathOptions={{
-          color: "#00D4FF",
-          weight: 5,
-          opacity: 0.85,
-          lineCap: "round",
-          lineJoin: "round",
-        }}
-      />
-      {/* halo da rota */}
-      <Polyline
-        positions={positions}
-        pathOptions={{
-          color: "#00D4FF",
-          weight: 12,
-          opacity: 0.15,
-          lineCap: "round",
-        }}
-      />
-      {route.origin && (
-        <Marker
-          position={[route.origin.lat, route.origin.lng]}
-          icon={L.divIcon({
-            html: `<div style="width:14px;height:14px;border-radius:999px;background:#00D4FF;border:3px solid #fff;box-shadow:0 0 0 4px rgba(0,212,255,.25),0 2px 6px rgba(0,0,0,.4)"></div>`,
-            className: "",
-            iconSize: [14, 14],
-            iconAnchor: [7, 7],
-          })}
-          zIndexOffset={1800}
+      <Source id="route-halo" type="geojson" data={geojson as any}>
+        <Layer
+          type="line"
+          paint={{
+            "line-color": "#00D4FF",
+            "line-width": 12,
+            "line-opacity": 0.15,
+            "line-cap": "round",
+            "line-join": "round",
+          }}
         />
+      </Source>
+      <Source id="route-main" type="geojson" data={geojson as any}>
+        <Layer
+          type="line"
+          paint={{
+            "line-color": "#00D4FF",
+            "line-width": 5,
+            "line-opacity": 0.9,
+            "line-cap": "round",
+            "line-join": "round",
+          }}
+        />
+      </Source>
+      {route.origin && (
+        <Marker longitude={route.origin.lng} latitude={route.origin.lat} anchor="center">
+          <div style={originMarkerStyle} />
+        </Marker>
       )}
       {route.destination && (
-        <Marker
-          position={[route.destination.lat, route.destination.lng]}
-          icon={L.divIcon({
-            html: `<div style="width:14px;height:14px;border-radius:3px;background:#ef4444;border:3px solid #fff;box-shadow:0 0 0 4px rgba(239,68,68,.25),0 2px 6px rgba(0,0,0,.4)"></div>`,
-            className: "",
-            iconSize: [14, 14],
-            iconAnchor: [7, 7],
-          })}
-          zIndexOffset={1800}
-        />
+        <Marker longitude={route.destination.lng} latitude={route.destination.lat} anchor="center">
+          <div style={destMarkerStyle} />
+        </Marker>
       )}
     </>
   );
+}
+
+const originMarkerStyle: React.CSSProperties = {
+  width: 14, height: 14, borderRadius: 999,
+  background: "#00D4FF", border: "3px solid #fff",
+  boxShadow: "0 0 0 4px rgba(0,212,255,.25), 0 2px 6px rgba(0,0,0,.4)",
+};
+const destMarkerStyle: React.CSSProperties = {
+  width: 14, height: 14, borderRadius: 3,
+  background: "#ef4444", border: "3px solid #fff",
+  boxShadow: "0 0 0 4px rgba(239,68,68,.25), 0 2px 6px rgba(0,0,0,.4)",
+};
+
+/** Coordenadas de um círculo (precisão GPS). */
+function circleCoords(lat: number, lng: number, radiusM: number): [number, number][] {
+  const coords: [number, number][] = [];
+  const R = 6378137;
+  const steps = 64;
+  for (let i = 0; i <= steps; i++) {
+    const angle = (i / steps) * 2 * Math.PI;
+    const dLat = ((radiusM * Math.cos(angle)) / R) * (180 / Math.PI);
+    const dLng = ((radiusM * Math.sin(angle)) / (R * Math.cos((lat * Math.PI) / 180))) * (180 / Math.PI);
+    coords.push([lng + dLng, lat + dLat]);
+  }
+  return coords;
 }
