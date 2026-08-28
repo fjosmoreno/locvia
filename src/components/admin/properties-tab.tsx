@@ -19,6 +19,7 @@ import {
   MapPin,
   Building2,
   CalendarDays,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,10 @@ import {
   formatDate,
   type PropertyAdmin,
 } from "@/components/admin/shared";
-import { PropertyFormDialog } from "@/components/admin/property-form-dialog";
+import {
+  PropertyFormDialog,
+  type EditableProperty,
+} from "@/components/admin/property-form-dialog";
 import { formatPrice } from "@/lib/geo";
 import { PROPERTY_TYPE_LABELS } from "@/lib/constants";
 import { Plus } from "lucide-react";
@@ -109,6 +113,8 @@ export function PropertiesTab() {
   const [rejectReason, setRejectReason] = React.useState("");
   const [deleteTarget, setDeleteTarget] = React.useState<PropertyAdmin | null>(null);
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [editTarget, setEditTarget] = React.useState<EditableProperty | null>(null);
+  const [editLoading, setEditLoading] = React.useState(false);
 
   // notas de rejeição (cliente-side)
   const [rejectNotes, setRejectNotes] = React.useState<Record<string, string>>({});
@@ -199,6 +205,28 @@ export function PropertiesTab() {
     );
   };
 
+  async function handleEdit(p: PropertyAdmin) {
+    setEditLoading(true);
+    try {
+      const res = await fetch(`/api/admin/properties/${p.id}`);
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error || "Falha ao carregar imóvel para edição.");
+        return;
+      }
+      const d = await res.json();
+      if (d.property) {
+        setEditTarget(d.property as EditableProperty);
+      } else {
+        toast.error("Imóvel não encontrado.");
+      }
+    } catch {
+      toast.error("Erro de rede ao carregar imóvel.");
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
   const confirmReject = () => {
     if (!rejectTarget) return;
     updateMutation.mutate(
@@ -261,6 +289,14 @@ export function PropertiesTab() {
         </Button>
       </div>
 
+      {/* Indicador de carregamento do imóvel para edição */}
+      {editLoading && (
+        <div className="px-3 py-2 bg-primary/10 border-b border-primary/20 text-xs text-primary flex items-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Carregando dados completos do imóvel…
+        </div>
+      )}
+
       {/* Conteúdo */}
       {isLoading ? (
         <ListSkeleton rows={4} />
@@ -286,6 +322,7 @@ export function PropertiesTab() {
               setStatus={setStatus}
               toggleFeatured={toggleFeatured}
               setBadge={setBadge}
+              onEdit={handleEdit}
               onReject={(pp) => {
                 setRejectTarget(pp);
                 setRejectReason("");
@@ -367,12 +404,28 @@ export function PropertiesTab() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Dialog de criação */}
       <PropertyFormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={() => {
           qc.invalidateQueries({ queryKey: ["admin", "properties"] });
           qc.invalidateQueries({ queryKey: ["admin", "stats"] });
+        }}
+      />
+
+      {/* Dialog de edição — reusa o mesmo componente, com editProperty */}
+      <PropertyFormDialog
+        open={!!editTarget}
+        onOpenChange={(o) => {
+          if (!o) setEditTarget(null);
+        }}
+        editProperty={editTarget}
+        onUpdated={() => {
+          qc.invalidateQueries({ queryKey: ["admin", "properties"] });
+          qc.invalidateQueries({ queryKey: ["admin", "stats"] });
+          qc.invalidateQueries({ queryKey: ["properties"] });
+          setEditTarget(null);
         }}
       />
     </div>
@@ -386,6 +439,7 @@ function PropertyAdminCard({
   setStatus,
   toggleFeatured,
   setBadge,
+  onEdit,
   onReject,
   onDelete,
   deletePending,
@@ -396,6 +450,7 @@ function PropertyAdminCard({
   setStatus: (p: PropertyAdmin, status: string, msg: string) => void;
   toggleFeatured: (p: PropertyAdmin) => void;
   setBadge: (p: PropertyAdmin, badge: BadgeKind) => void;
+  onEdit: (p: PropertyAdmin) => void;
   onReject: (p: PropertyAdmin) => void;
   onDelete: (p: PropertyAdmin) => void;
   deletePending: boolean;
@@ -413,6 +468,7 @@ function PropertyAdminCard({
         {/* thumb */}
         <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 grid place-items-center text-muted-foreground bg-muted ring-1 ring-border/40 relative">
           {p.images?.[0]?.url ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={p.images[0].url}
               alt={p.title}
@@ -493,6 +549,15 @@ function PropertyAdminCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/40">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onEdit(p)}
+          className="gap-1.5"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+          Editar
+        </Button>
         {p.status !== "ACTIVE" && (
           <Button
             size="sm"
@@ -568,6 +633,10 @@ function PropertyAdminCard({
                 <X className="w-3.5 h-3.5" /> Remover selo
               </DropdownMenuItem>
             )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onEdit(p)}>
+              <Pencil className="w-3.5 h-3.5" /> Editar imóvel
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"

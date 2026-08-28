@@ -30,6 +30,8 @@ import {
   Sparkles,
   ImageIcon,
   Plus,
+  X,
+  Upload,
 } from "lucide-react";
 import {
   PROPERTY_TYPES,
@@ -56,10 +58,48 @@ const BADGE_OPTIONS = [
   { value: "RECOMMENDED", label: "Recomendado" },
 ];
 
+// Subset que o form precisa pra editar (vem do GET /api/admin/properties/[id])
+export interface EditableProperty {
+  id: string;
+  title: string;
+  description: string | null;
+  purpose: string;
+  propertyType: string;
+  price: number;
+  condominium: number | null;
+  iptu: number | null;
+  area: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  parkingSpaces: number | null;
+  address: string | null;
+  number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  latitude: number;
+  longitude: number;
+  contactName: string | null;
+  whatsapp: string | null;
+  phone: string | null;
+  status: string;
+  featured: boolean;
+  badge: string | null;
+  images: { id: string; url: string }[];
+  agencyId: string | null;
+  ownerId: string | null;
+  brokerId: string | null;
+}
+
 export interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (property: { id: string; title: string }) => void;
+  onUpdated?: (property: { id: string; title: string }) => void;
+  /** Quando definido, o dialog entra em modo de edição. */
+  editProperty?: EditableProperty | null;
 }
 
 interface AdminAgency {
@@ -87,7 +127,14 @@ function formatCEP(value: string): string {
   return `${v.slice(0, 5)}-${v.slice(5)}`;
 }
 
-export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFormDialogProps) {
+export function PropertyFormDialog({
+  open,
+  onOpenChange,
+  onCreated,
+  onUpdated,
+  editProperty,
+}: PropertyFormDialogProps) {
+  const isEdit = !!editProperty;
   const [submitting, setSubmitting] = React.useState(false);
 
   // ===== Dados básicos =====
@@ -132,6 +179,46 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
 
   // ===== Imagens =====
   const [imageUrls, setImageUrls] = React.useState<string[]>([""]);
+  const [uploadingImage, setUploadingImage] = React.useState(false);
+
+  // ===== Pre-fill ao abrir modo de edição =====
+  React.useEffect(() => {
+    if (!open) return;
+    if (editProperty) {
+      const p = editProperty;
+      setTitle(p.title ?? "");
+      setDescription(p.description ?? "");
+      setPurpose(p.purpose ?? PURPOSES.RENT);
+      setPropertyType(p.propertyType ?? PROPERTY_TYPES.APARTMENT);
+      setPrice(p.price != null ? String(p.price) : "");
+      setCondominium(p.condominium != null ? String(p.condominium) : "");
+      setIptu(p.iptu != null ? String(p.iptu) : "");
+      setArea(p.area != null ? String(p.area) : "");
+      setBedrooms(p.bedrooms != null ? String(p.bedrooms) : "");
+      setBathrooms(p.bathrooms != null ? String(p.bathrooms) : "");
+      setParkingSpaces(p.parkingSpaces != null ? String(p.parkingSpaces) : "");
+      setAddress(p.address ?? "");
+      setNumber(p.number ?? "");
+      setComplement(p.complement ?? "");
+      setNeighborhood(p.neighborhood ?? "");
+      setCity(p.city ?? "");
+      setState(p.state ?? "");
+      setPostalCode(p.postalCode ?? "");
+      setLatitude(p.latitude != null ? String(p.latitude) : "");
+      setLongitude(p.longitude != null ? String(p.longitude) : "");
+      setAgencyId(p.agencyId ?? "");
+      setOwnerId(p.ownerId ?? "");
+      setContactName(p.contactName ?? "");
+      setWhatsapp(p.whatsapp ?? "");
+      setPhone(p.phone ?? "");
+      setStatus(p.status ?? PROPERTY_STATUS.ACTIVE);
+      setFeatured(Boolean(p.featured));
+      setBadge(p.badge ?? "");
+      const imgs = p.images?.length ? p.images.map((i) => i.url) : [""];
+      setImageUrls(imgs);
+    }
+    // Quando abre em modo CREATE, limpa o form
+  }, [open, editProperty]);
 
   // ===== Listas =====
   const agenciesQ = useQuery<{ agencies: AdminAgency[] }>({
@@ -173,6 +260,52 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
     onOpenChange(o);
   }
 
+  async function handleImageUpload(files: FileList | null) {
+    if (!files || !files.length) return;
+    setUploadingImage(true);
+    try {
+      const valid: File[] = [];
+      for (const f of Array.from(files)) {
+        if (!["image/jpeg", "image/png", "image/webp", "image/jpg"].includes(f.type)) {
+          toast.error(`${f.name}: formato não suportado. Use JPG, PNG ou WebP.`);
+          continue;
+        }
+        if (f.size > 8 * 1024 * 1024) {
+          toast.error(`${f.name}: excede 8MB.`);
+          continue;
+        }
+        valid.push(f);
+      }
+      const uploaded: string[] = [];
+      for (const f of valid) {
+        const fd = new FormData();
+        fd.append("file", f);
+        fd.append("kind", "image");
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const d = await res.json();
+        if (!res.ok) {
+          toast.error(d.error || `${f.name}: falha no upload.`);
+          continue;
+        }
+        uploaded.push(d.url);
+      }
+      if (uploaded.length) {
+        setImageUrls((prev) => {
+          const next = [...prev];
+          // substitui o primeiro slot vazio se houver
+          const emptyIdx = next.findIndex((u) => !u);
+          if (emptyIdx >= 0) next[emptyIdx] = uploaded[0];
+          else next.push(...uploaded);
+          if (uploaded.length > 1) next.push(...uploaded.slice(1));
+          return next;
+        });
+        toast.success(uploaded.length === 1 ? "Imagem enviada." : `${uploaded.length} imagens enviadas.`);
+      }
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
@@ -181,7 +314,7 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
       toast.error("Preencha título e preço.");
       return;
     }
-    if (!agencyId && !ownerId) {
+    if (!isEdit && !agencyId && !ownerId) {
       toast.error("Vincule a uma imobiliária ou proprietário.");
       return;
     }
@@ -190,62 +323,81 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
       toast.error("Preço inválido.");
       return;
     }
+    if (isEdit) {
+      if (!latitude || !longitude) {
+        toast.error("Latitude e longitude são obrigatórias na edição.");
+        return;
+      }
+    }
 
-    const cleanedImages = imageUrls
-      .map((u) => u.trim())
-      .filter(Boolean);
+    const cleanedImages = imageUrls.map((u) => u.trim()).filter(Boolean);
 
     setSubmitting(true);
     try {
       const body: Record<string, unknown> = {
         title: title.trim(),
-        description: description || undefined,
+        description: description || null,
         purpose,
         propertyType,
         price: priceNum,
-        condominium: condominium ? Number(condominium.replace(/\D/g, "")) : undefined,
-        iptu: iptu ? Number(iptu.replace(/\D/g, "")) : undefined,
-        area: area ? Number(area.replace(",", ".")) : undefined,
-        bedrooms: bedrooms ? Number(bedrooms) : undefined,
-        bathrooms: bathrooms ? Number(bathrooms) : undefined,
-        parkingSpaces: parkingSpaces ? Number(parkingSpaces) : undefined,
-        address: address || undefined,
-        number: number || undefined,
-        complement: complement || undefined,
-        neighborhood: neighborhood || undefined,
-        city: city || undefined,
-        state: state || undefined,
-        postalCode: postalCode.replace(/\D/g, "") || undefined,
+        condominium: condominium ? Number(condominium.replace(/\D/g, "")) : null,
+        iptu: iptu ? Number(iptu.replace(/\D/g, "")) : null,
+        area: area ? Number(area.replace(",", ".")) : null,
+        bedrooms: bedrooms ? Number(bedrooms) : null,
+        bathrooms: bathrooms ? Number(bathrooms) : null,
+        parkingSpaces: parkingSpaces ? Number(parkingSpaces) : null,
+        address: address || null,
+        number: number || null,
+        complement: complement || null,
+        neighborhood: neighborhood || null,
+        city: city || null,
+        state: state || null,
+        postalCode: postalCode.replace(/\D/g, "") || null,
         latitude: latitude ? Number(latitude.replace(",", ".")) : undefined,
         longitude: longitude ? Number(longitude.replace(",", ".")) : undefined,
-        contactName: contactName || undefined,
-        whatsapp: whatsapp || undefined,
-        phone: phone || undefined,
+        contactName: contactName || null,
+        whatsapp: whatsapp || null,
+        phone: phone || null,
         status,
         featured,
-        badge: badge && badge !== "none" ? badge : undefined,
-        images: cleanedImages.length ? cleanedImages : undefined,
+        badge: badge && badge !== "none" ? badge : null,
       };
+      if (!isEdit) {
+        body.images = cleanedImages.length ? cleanedImages : undefined;
+      } else {
+        // Em edição, só envia images se houver ao menos uma URL (PUT substitui todas)
+        if (cleanedImages.length) body.images = cleanedImages;
+      }
       // anunciante — prioridade: imobiliária, depois proprietário
       if (agencyId) body.agencyId = agencyId;
       else if (ownerId) body.ownerId = ownerId;
 
-      const res = await fetch("/api/admin/properties", {
-        method: "POST",
+      const url = isEdit
+        ? `/api/admin/properties/${editProperty!.id}`
+        : "/api/admin/properties";
+      const method = isEdit ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Falha ao cadastrar imóvel.");
+        toast.error(data.error || (isEdit ? "Falha ao atualizar imóvel." : "Falha ao cadastrar imóvel."));
         return;
       }
-      toast.success(`"${data.property.title}" cadastrado.`, {
-        description: status === PROPERTY_STATUS.ACTIVE
-          ? "Imóvel já está no ar."
-          : `Status: ${status}.`,
-      });
-      onCreated?.({ id: data.property.id, title: data.property.title });
+      if (isEdit) {
+        toast.success(`"${data.property.title}" atualizado.`);
+        onUpdated?.({ id: data.property.id, title: data.property.title });
+      } else {
+        toast.success(`"${data.property.title}" cadastrado.`, {
+          description: status === PROPERTY_STATUS.ACTIVE
+            ? "Imóvel já está no ar."
+            : `Status: ${status}.`,
+        });
+        onCreated?.({ id: data.property.id, title: data.property.title });
+      }
       reset();
       onOpenChange(false);
     } catch {
@@ -264,9 +416,13 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
               <HomeIcon className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="text-base tracking-tight">Cadastrar imóvel</DialogTitle>
+              <DialogTitle className="text-base tracking-tight">
+                {isEdit ? "Editar imóvel" : "Cadastrar imóvel"}
+              </DialogTitle>
               <DialogDescription className="text-xs">
-                Cria o anúncio vinculado a uma imobiliária ou proprietário. Status padrão: ativo.
+                {isEdit
+                  ? "Atualize qualquer campo do anúncio — incluindo endereço, lat/lng, fotos e status."
+                  : "Cria o anúncio vinculado a uma imobiliária ou proprietário. Status padrão: ativo."}
               </DialogDescription>
             </div>
           </div>
@@ -454,61 +610,63 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
             </div>
           </Section>
 
-          {/* === ANUNCIANTE === */}
-          <Section title="Anunciante" icon={<HomeIcon className="w-3.5 h-3.5" />}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Imobiliária" hint={agencyId ? "Selecionada — prioridade" : undefined}>
-                <Select
-                  value={agencyId || "none"}
-                  onValueChange={(v) => {
-                    setAgencyId(v === "none" ? "" : v);
-                    if (v !== "none") setOwnerId("");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar imobiliária" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Nenhuma —</SelectItem>
-                    {agenciesQ.data?.agencies
-                      ?.filter((a) => a.status === "APPROVED")
-                      .map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Proprietário" hint={ownerId ? "Selecionado" : undefined}>
-                <Select
-                  value={ownerId || "none"}
-                  onValueChange={(v) => {
-                    setOwnerId(v === "none" ? "" : v);
-                    if (v !== "none") setAgencyId("");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar proprietário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Nenhum —</SelectItem>
-                    {ownersQ.data?.owners
-                      ?.filter((o) => o.verificationStatus === "VERIFIED")
-                      .map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          {o.user.name} ({o.user.email})
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-2">
-              Vincule a <strong>uma</strong> imobiliária ou <strong>um</strong> proprietário.
-              Se ambos preenchidos, a imobiliária tem prioridade.
-            </p>
-          </Section>
+          {/* === ANUNCIANTE — só no CREATE (na edição exibimos o atual) === */}
+          {!isEdit && (
+            <Section title="Anunciante" icon={<HomeIcon className="w-3.5 h-3.5" />}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Imobiliária" hint={agencyId ? "Selecionada — prioridade" : undefined}>
+                  <Select
+                    value={agencyId || "none"}
+                    onValueChange={(v) => {
+                      setAgencyId(v === "none" ? "" : v);
+                      if (v !== "none") setOwnerId("");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecionar imobiliária" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Nenhuma —</SelectItem>
+                      {agenciesQ.data?.agencies
+                        ?.filter((a) => a.status === "APPROVED")
+                        .map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Proprietário" hint={ownerId ? "Selecionado" : undefined}>
+                  <Select
+                    value={ownerId || "none"}
+                    onValueChange={(v) => {
+                      setOwnerId(v === "none" ? "" : v);
+                      if (v !== "none") setAgencyId("");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecionar proprietário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Nenhum —</SelectItem>
+                      {ownersQ.data?.owners
+                        ?.filter((o) => o.verificationStatus === "VERIFIED")
+                        .map((o) => (
+                          <SelectItem key={o.id} value={o.id}>
+                            {o.user.name} ({o.user.email})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Vincule a <strong>uma</strong> imobiliária ou <strong>um</strong> proprietário.
+                Se ambos preenchidos, a imobiliária tem prioridade.
+              </p>
+            </Section>
+          )}
 
           {/* === CONTATO === */}
           <Section title="Contato do anúncio">
@@ -537,15 +695,30 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
             </div>
           </Section>
 
-          {/* === IMAGENS === */}
+          {/* === IMAGENS (com upload) === */}
           <Section
             title="Imagens"
             icon={<ImageIcon className="w-3.5 h-3.5" />}
-            hint="Cole as URLs (uma por linha). A primeira vira a capa."
+            hint={isEdit ? "Adicionar novas ou substituir. A primeira vira a capa." : "Faça upload (JPG/PNG/WebP até 8MB) ou cole URLs."}
           >
             <div className="space-y-2">
               {imageUrls.map((url, i) => (
-                <div key={i} className="flex gap-1.5">
+                <div key={i} className="flex gap-1.5 items-center">
+                  {url ? (
+                    <div className="relative w-12 h-12 rounded-md overflow-hidden border border-border/60 shrink-0 bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      {i === 0 && (
+                        <span className="absolute bottom-0 inset-x-0 bg-primary/85 text-primary-foreground text-[8px] font-bold text-center py-0.5">
+                          CAPA
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-md border border-dashed border-border/60 grid place-items-center shrink-0 text-muted-foreground/60">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                    </div>
+                  )}
                   <Input
                     value={url}
                     onChange={(e) => {
@@ -554,40 +727,64 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
                       setImageUrls(next);
                     }}
                     placeholder={`https://... (imagem ${i + 1})`}
+                    className="flex-1"
                   />
                   {imageUrls.length > 1 && (
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={() =>
-                        setImageUrls(imageUrls.filter((_, idx) => idx !== i))
-                      }
+                      onClick={() => setImageUrls(imageUrls.filter((_, idx) => idx !== i))}
                       className="shrink-0"
                       title="Remover"
                     >
-                      ×
+                      <X className="w-4 h-4" />
                     </Button>
                   )}
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setImageUrls([...imageUrls, ""])}
-                className="gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Adicionar imagem
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setImageUrls([...imageUrls, ""])}
+                  className="gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Adicionar URL
+                </Button>
+                <label
+                  className={
+                    "inline-flex items-center gap-1.5 rounded-md text-xs font-medium h-8 px-3 border border-border/60 bg-background hover:bg-accent cursor-pointer transition-colors " +
+                    (uploadingImage ? "opacity-60 pointer-events-none" : "")
+                  }
+                >
+                  {uploadingImage ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
+                  )}
+                  Enviar do computador
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      handleImageUpload(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              </div>
             </div>
           </Section>
 
           {/* === PUBLICAÇÃO === */}
           <Section title="Publicação">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Field label="Status inicial">
+              <Field label="Status">
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -600,7 +797,7 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
                 </Select>
               </Field>
               <Field label="Selo">
-                <Select value={badge} onValueChange={setBadge}>
+                <Select value={badge || "none"} onValueChange={setBadge}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {BADGE_OPTIONS.map((b) => (
@@ -641,7 +838,7 @@ export function PropertyFormDialog({ open, onOpenChange, onCreated }: PropertyFo
               ) : (
                 <HomeIcon className="w-4 h-4" />
               )}
-              Cadastrar imóvel
+              {isEdit ? "Salvar alterações" : "Cadastrar imóvel"}
             </Button>
           </DialogFooter>
         </form>

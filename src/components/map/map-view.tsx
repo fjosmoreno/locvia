@@ -118,11 +118,16 @@ function PriceMarker({
   );
 }
 
-function UserMarker() {
+function UserMarker({ hereCount = 0 }: { hereCount?: number }) {
   return (
     <div className="user-marker">
       <div className="pulse" />
       <div className="dot" />
+      {hereCount > 0 && (
+        <span className="here-badge" title={`${hereCount} imóvel(is) aqui`}>
+          +{hereCount}
+        </span>
+      )}
     </div>
   );
 }
@@ -389,11 +394,21 @@ export default function MapView() {
         })}
 
         {/* Marcador do usuário */}
-        {userLocation && (
-          <>
-            <Marker longitude={userLocation.lng} latitude={userLocation.lat} anchor="center">
-              <UserMarker />
-            </Marker>
+        {userLocation && (() => {
+          // Conta imóveis no mesmo pixel/ponto do user (≤15m de tolerância).
+          // Marca com badge "+N" para sinalizar "tem imóvel aqui" sem
+          // esconder o marker do imóvel.
+          const hereCount = properties.reduce((acc, p) => {
+            const dx = (p.longitude - userLocation.lng) * Math.cos((userLocation.lat * Math.PI) / 180);
+            const dy = p.latitude - userLocation.lat;
+            const dist = Math.sqrt(dx * dx + dy * dy) * 111320; // ~metros
+            return dist <= 25 ? acc + 1 : acc;
+          }, 0);
+          return (
+            <>
+              <Marker longitude={userLocation.lng} latitude={userLocation.lat} anchor="center">
+                <UserMarker hereCount={hereCount} />
+              </Marker>
             {userLocation.accuracy && userLocation.accuracy < 500 && (
               <Source
                 id="user-accuracy"
@@ -421,7 +436,8 @@ export default function MapView() {
               </Source>
             )}
           </>
-        )}
+          );
+        })()}
 
         {/* Imóvel selecionado não na lista atual */}
         {selectedProperty && !properties.find((p) => p.id === selectedProperty.id) && (

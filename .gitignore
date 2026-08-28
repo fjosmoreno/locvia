@@ -76,3 +76,6 @@ worklog.md
 local-*.md
 prisma/dev.db
 locvia-admin-*.png
+
+# Diagnostic scripts (one-off, não usar em prod)
+scripts/diag-all.mjs

@@ -372,6 +372,10 @@ html, body { overflow-x: hidden; }
   user-select: none;
   animation: marker-enter 0.34s var(--ease-spring) backwards;
   will-change: transform;
+  /* fica acima do user-marker para que, em localizações sobrepostas
+     (ex.: imóvel cadastrado no próprio endereço do usuário),
+     o marker do imóvel não fique escondido atrás do pulse. */
+  z-index: 2;
 }
 .price-marker:hover {
   transform: translateY(-3px) scale(1.06);
@@ -474,11 +478,15 @@ html, body { overflow-x: hidden; }
 
 /* ============================================================
    MARCADOR DE LOCALIZAÇÃO DO USUÁRIO — sofisticado, não azul genérico
+   z-index 1 (abaixo do .price-marker que é 2) — para que, quando o
+   imóvel cadastrado está no mesmo ponto do usuário, o marker do imóvel
+   fique visível por cima do dot do usuário.
    ============================================================ */
 .user-marker {
   position: relative;
   width: 18px;
   height: 18px;
+  z-index: 1;
 }
 .user-marker .dot {
   position: absolute;
@@ -503,7 +511,28 @@ html, body { overflow-x: hidden; }
 }
 @keyframes user-pulse {
   0% { transform: scale(0.7); opacity: 0.65; }
-  100% { transform: scale(2.8); opacity: 0; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Contador de imóveis no mesmo ponto do usuário (badge) */
+.user-marker .here-badge {
+  position: absolute;
+  top: -7px;
+  right: -10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #06222b;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 2px var(--background), 0 1px 3px rgba(0,0,0,0.5);
+  z-index: 3;
+  pointer-events: none;
 }
 
 /* ============================================================

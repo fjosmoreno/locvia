@@ -33,6 +33,16 @@ const headers = {
   "User-Agent": "LOCVIA/1.0 (MVP)",
 };
 
+/** Normaliza string pra comparação: lower-case + sem acentos + trim. */
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Busca CEP brasileiro via ViaCEP (gratuito, sem chave). Retorna null se não encontrado. */
 export async function lookupCep(rawCep: string): Promise<ViaCepResult | null> {
   const digits = rawCep.replace(/\D/g, "").slice(0, 8);
@@ -109,35 +119,86 @@ export async function geocodeAddress(parts: {
         lat: string;
         lon: string;
         display_name: string;
+        address?: Record<string, string>;
       }>;
       if (!data.length) return null;
+      const hit = data[0];
       return {
-        lat: parseFloat(data[0].lat),
-        lng: parseFloat(data[0].lon),
-        displayName: data[0].display_name,
+        lat: parseFloat(hit.lat),
+        lng: parseFloat(hit.lon),
+        displayName: hit.display_name,
+        type: hit.address?.road ?? hit.address?.suburb,
       };
     } catch {
       return null;
     }
   };
 
-  const first = await tryStructured();
-  if (first) return first;
+  // Compara se o resultado Nominatim bate com o que o usuário digitou
+  // (rua e bairro). Quando NÃO bate (ex: cidade tem 2 "Rua Bragança" em
+  // bairros diferentes), o Nominatim pode retornar a errada — nesse caso
+  // descartamos e caímos pra free-text, que é mais permissivo.
+  const matches = (
+    result: GeoResult,
+    options: { strictRoad?: boolean } = {}
+  ): boolean => {
+    if (!result.displayName) return false;
+    const display = normalize(result.displayName);
+    if (parts.neighborhood) {
+      const hood = normalize(parts.neighborhood);
+      if (hood && !display.includes(hood)) return false;
+    }
+    if (options.strictRoad && parts.street) {
+      const road = normalize(parts.street).replace(
+        /^(rua|avenida|av\.?|alameda|travessa|rodovia|estrada)\s+/,
+        ""
+      );
+      if (road && !display.includes(road)) return false;
+    }
+    return true;
+  };
 
-  // Tentativa 2: free-text query (Nominatim é estricto com street=+number=,
-  // então se o número exato não existe no OSM, caímos pra query livre com bairro)
+  // Tentativa 1: structured (street + number + city/state/postalcode)
+  // Só aceita se o resultado mencionar o bairro que o usuário digitou.
+  const first = await tryStructured();
+  if (first && matches(first)) return first;
+
+  // Tentativa 2: free-text com bairro e cidade juntos.
+  // Mais robusto pra cidades com ruas de mesmo nome em bairros diferentes.
   const freeText = [
-    parts.number,
     parts.street,
+    parts.number,
     parts.neighborhood,
     parts.city,
     parts.state,
   ]
     .filter(Boolean)
     .join(", ");
-  if (!freeText) return null;
-  const fallback = await searchAddress(freeText, 1);
-  return fallback[0] ?? null;
+  if (freeText) {
+    const fallback = await searchAddress(freeText, 3);
+    const match = fallback.find((r) => matches(r, { strictRoad: true })) ??
+      fallback.find((r) => matches(r)) ??
+      fallback[0];
+    if (match) return match;
+  }
+
+  // Tentativa 3: só com bairro + cidade (último recurso, retorna o bairro)
+  if (parts.neighborhood && parts.city) {
+    const hoodOnly = await searchAddress(
+      `${parts.neighborhood}, ${parts.city}, ${parts.state ?? "BR"}`,
+      1
+    );
+    if (hoodOnly[0]) return hoodOnly[0];
+  }
+
+  // Fallback final: aceita o structured mesmo sem bater (logged pra debug)
+  if (first) {
+    console.warn(
+      `[geocode] structured Nominatim mismatch: requested "${parts.street} ${parts.number}, ${parts.neighborhood}, ${parts.city}" → got "${first.displayName}"`
+    );
+    return first;
+  }
+  return null;
 }
 
 /** Monta URL de navegação "como chegar" no serviço de mapas do dispositivo. */
