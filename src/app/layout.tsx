@@ -87,6 +87,8 @@ export default function RootLayout({
       <head>
         {/* Mobile-web-app-capable legacy (Android Chrome) */}
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* iOS Safari — ativa fullscreen mode (sem barra de endereço) */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         {/* Cor da barra de status no Android (dark mode default) */}
         <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
         {/* Status bar translucent no iOS (cobre atrás do notch) */}
