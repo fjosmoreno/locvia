@@ -95,8 +95,13 @@ interface UIState {
   // Comparador de imóveis (até 3)
   compareIds: string[];
 
+  // Hydration: começamos SEMPRE com defaults pra evitar mismatch SSR/CSR.
+  // O client hidrata a sessionStorage num useEffect (via `hydrateFromSession`).
+  hydrated: boolean;
+
   // actions
   setPanelView: (v: PanelView) => void;
+  hydrateFromSession: () => void;
   openProperty: (p: Property) => void;
   openPropertyById: (id: string) => void;
   closeProperty: () => void;
@@ -217,9 +222,13 @@ function saveFilters(f: Filters) {
   }
 }
 
-// Restauração lazy na inicialização do store
-const restoredView = loadMapView();
-const restoredFilters = loadFilters();
+// IMPORTANTE (hydration): não lemos sessionStorage no module scope.
+// Servidor e cliente devem produzir o MESMO estado inicial — qualquer
+// divergência aqui causa hydration mismatch e React re-renderiza toda
+// a árvore inteira. A restauração da visão do mapa e dos filtros
+// acontece em `useHydrateSessionState()` (chamado uma vez no AppShell).
+let restoredView: MapView | null = null;
+let restoredFilters: Filters | null = null;
 
 export const useUI = create<UIState>((set, get) => ({
   panelView: "list",
@@ -231,21 +240,22 @@ export const useUI = create<UIState>((set, get) => ({
   locationError: null,
   locating: false,
   locationDenied: false,
-  filters: restoredFilters || { ...DEFAULT_FILTERS },
+  // SEMPRE defaults na inicialização — `hydrateFromSession` carrega sessionStorage
+  // depois da hidratação, evitando mismatch entre server e client.
+  filters: { ...DEFAULT_FILTERS },
   filtersDirty: false,
   drawer: null,
   reportPropertyId: null,
   mapBbox: null,
-  mapCenter: restoredView
-    ? { lat: restoredView.lat, lng: restoredView.lng }
-    : { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng },
-  exploreView: restoredView,
+  mapCenter: { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng },
+  exploreView: null,
   returnView: null,
   searchInAreaPrompt: false,
   loadingProperties: false,
   properties: [],
   propertiesError: null,
   flyToTarget: null,
+  hydrated: false,
 
   // Pergunte ao LOCVIA — estado inicial
   ai: {
@@ -273,6 +283,30 @@ export const useUI = create<UIState>((set, get) => ({
   compareIds: [],
 
   setPanelView: (v) => set({ panelView: v }),
+
+  /**
+   * Hidrata o store com valores persistidos em sessionStorage.
+   * Chamado UMA vez após o mount no client. Não faz nada no servidor.
+   *
+   * Por que existe: se lermos sessionStorage no module scope (top-level),
+   * o servidor gera um estado e o client gera outro diferente — React
+   * detecta o mismatch e re-renderiza toda a árvore. Aqui lemos DEPOIS
+   * do hydration, então o primeiro render é idêntico em ambos os lados.
+   */
+  hydrateFromSession: () => {
+    if (typeof window === "undefined") return;
+    if (get().hydrated) return; // idempotente
+    const view = loadMapView();
+    const filters = loadFilters();
+    set((s) => ({
+      hydrated: true,
+      exploreView: view,
+      mapCenter: view
+        ? { lat: view.lat, lng: view.lng }
+        : s.mapCenter,
+      filters: filters ?? s.filters,
+    }));
+  },
 
   openProperty: (p) =>
     set((s) => ({

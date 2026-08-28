@@ -319,6 +319,85 @@ html, body { overflow-x: hidden; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* ---------- WebGL fallback (lista quando o mapa não inicializa) ---------- */
+.map-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+  background:
+    radial-gradient(ellipse at top, rgba(11, 95, 239, 0.08), transparent 60%),
+    linear-gradient(to bottom, #0b1120, #050811);
+  color: #e6ecf5;
+}
+.map-fallback h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.map-fallback p {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  max-width: 26rem;
+  margin-bottom: 1rem;
+}
+.map-fallback-list {
+  width: 100%;
+  max-width: 36rem;
+  max-height: 70%;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+  background: rgba(11, 17, 32, 0.55);
+  border: 1px solid rgba(220, 226, 236, 0.1);
+}
+.map-fallback-list .item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.5rem;
+  background: rgba(20, 27, 45, 0.6);
+  border: 1px solid rgba(220, 226, 236, 0.08);
+  text-align: left;
+  width: 100%;
+  color: inherit;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.map-fallback-list .item:hover {
+  background: rgba(20, 27, 45, 0.85);
+  transform: translateY(-1px);
+}
+.map-fallback-list .item .price {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #00d4ff;
+  white-space: nowrap;
+}
+.map-fallback-list .item .title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.map-fallback-list .item .local {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  margin-top: 2px;
+}
+
 /* Animação de entrada dos marcadores — spring scale-in */
 @keyframes marker-enter {
   0% { opacity: 0; transform: scale(0.5); }

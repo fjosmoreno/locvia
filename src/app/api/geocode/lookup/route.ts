@@ -10,10 +10,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { geocodeAddress, lookupCep } from "@/lib/geocode";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  // Geocoding lookup — bate em Nominatim + ViaCEP. Limite menor por ser
+  // lookup estruturado (não free-text), tipicamente usado em formulários.
+  const limited = rateLimitResponse(req, { windowMs: 60_000, max: 20 });
+  if (limited) return limited;
+
   let body: Record<string, unknown> = {};
   try {
     body = await req.json();

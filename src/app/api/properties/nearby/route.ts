@@ -29,6 +29,9 @@ export async function GET(req: NextRequest) {
     bathrooms: sp.get("bathrooms") ? Number(sp.get("bathrooms")) : undefined,
     parkingSpaces: sp.get("parkingSpaces") ? Number(sp.get("parkingSpaces")) : undefined,
     minArea: sp.get("minArea") ? Number(sp.get("minArea")) : undefined,
+    city: sp.get("city") || undefined,
+    state: sp.get("state") || undefined,
+    search: sp.get("search") || undefined,
     bbox: {
       minLat: lat - latDelta,
       maxLat: lat + latDelta,

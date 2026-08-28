@@ -5,9 +5,14 @@ import { getSessionUser, getAdvertiser, ADVERTISER_ROLES } from "@/lib/session";
 import { canPublish } from "@/lib/plans";
 import { PROPERTY_STATUS } from "@/lib/constants";
 import { geocodeAddress } from "@/lib/geocode";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/properties — listagem pública com filtros + bbox
 export async function GET(req: NextRequest) {
+  // GET público: limite generoso (60/min) — inclui o filtro padrão e
+  // os refinamentos via "pesquisar nesta área".
+  const limited = rateLimitResponse(req, { windowMs: 60_000, max: 60 });
+  if (limited) return limited;
   const sp = req.nextUrl.searchParams;
   const purpose = sp.get("purpose") || undefined;
   const propertyType = sp.getAll("propertyType");
@@ -18,6 +23,7 @@ export async function GET(req: NextRequest) {
   const parkingSpaces = sp.get("parkingSpaces") ? Number(sp.get("parkingSpaces")) : undefined;
   const minArea = sp.get("minArea") ? Number(sp.get("minArea")) : undefined;
   const city = sp.get("city") || undefined;
+  const state = sp.get("state") || undefined;
   const search = sp.get("search") || undefined;
   const minLat = sp.get("minLat");
   const maxLat = sp.get("maxLat");
@@ -27,7 +33,16 @@ export async function GET(req: NextRequest) {
     minLat && maxLat && minLng && maxLng
       ? { minLat: +minLat, maxLat: +maxLat, minLng: +minLng, maxLng: +maxLng }
       : undefined;
-  const limit = Math.min(Number(sp.get("limit") || "300"), 500);
+  // Limite: cap em 500, saneia entradas inválidas (<=0, NaN, > 500).
+  const rawLimit = Number(sp.get("limit") ?? "300");
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 500) : 300;
+
+  // Offset (paginação): saneia negativos/NaN. Offset além do total = resultado vazio.
+  const rawOffset = Number(sp.get("offset") ?? "0");
+  const offset =
+    Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+
   const origin =
     sp.get("originLat") && sp.get("originLng")
       ? { lat: Number(sp.get("originLat")), lng: Number(sp.get("originLng")) }
@@ -44,26 +59,53 @@ export async function GET(req: NextRequest) {
     parkingSpaces,
     minArea,
     city,
+    state,
     bbox,
     search,
   });
   if (featuredOnly) (where.AND as any[]).push({ featured: true });
+
+  // Total sem paginação — para o cliente saber se há mais páginas.
+  const total = await db.property.count({ where });
+
+  // Se offset já passou do total, retornamos lista vazia (não silenciamos pra 1ª página).
+  if (offset >= total && total > 0) {
+    return NextResponse.json({
+      properties: [],
+      total,
+      limit,
+      offset,
+      hasMore: false,
+    });
+  }
 
   const props = await db.property.findMany({
     where,
     include: propertyInclude,
     orderBy: [{ featured: "desc" }, { views: "desc" }, { createdAt: "desc" }],
     take: limit,
+    skip: offset,
   });
 
   const data = await Promise.all(props.map((p) => serializeProperty(p, origin)));
   // ordena por distância se houver origem
   if (origin) data.sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
-  return NextResponse.json({ properties: data, total: data.length });
+  return NextResponse.json({
+    properties: data,
+    total,
+    limit,
+    offset,
+    hasMore: offset + data.length < total,
+  });
 }
 
 // POST /api/properties — cria imóvel (anunciante autenticado)
 export async function POST(req: NextRequest) {
+  // POST: limite menor (20/min) — criação de imóvel é pesada (geocoding,
+  // upload de imagens, várias queries no DB).
+  const limited = rateLimitResponse(req, { windowMs: 60_000, max: 20 });
+  if (limited) return limited;
+
   const user = await getSessionUser();
   if (!user || !ADVERTISER_ROLES.includes(user.role)) {
     return NextResponse.json({ error: "Acesso negado. Faça login como anunciante." }, { status: 403 });

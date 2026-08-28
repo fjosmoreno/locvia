@@ -11,6 +11,7 @@ import { useUserLocation } from "@/hooks/use-geolocation";
 import { formatPrice } from "@/lib/geo";
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from "@/lib/constants";
 import { MapControls, SearchInAreaPrompt } from "@/components/map/map-overlays";
+import { useWebGLSupport } from "@/lib/webgl";
 import type { Property } from "@/lib/types";
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || "";
@@ -332,131 +333,217 @@ export default function MapView() {
     [properties, selectedPropertyId]
   );
 
+  // Detecta suporte a WebGL — se faltar (Chromium headless, iOS WebView antigo,
+  // driver quebrado), mostramos fallback em lista em vez de canvas em branco.
+  const webgl = useWebGLSupport();
+  const showFallback = webgl !== null && webgl !== "webgl2";
+
   return (
     <div className="absolute inset-0">
-      <Map
-        {...viewState}
-        onMove={onMove}
-        onMoveEnd={onMoveEnd}
-        onLoad={updateFromMap}
-        mapStyle={mapStyle}
-        ref={mapRef as any}
-        maxZoom={20}
-        minZoom={3}
-        attributionControl={{ compact: true }}
-      >
-        <MapController mapRef={mapRef} />
-        <MapControls />
-        <SearchInAreaPrompt />
+      {showFallback ? (
+        <MapFallbackList
+          properties={properties}
+          onPick={(p) => openProperty(p)}
+        />
+      ) : (
+        <Map
+          {...viewState}
+          onMove={onMove}
+          onMoveEnd={onMoveEnd}
+          onLoad={updateFromMap}
+          mapStyle={mapStyle}
+          ref={mapRef as any}
+          maxZoom={20}
+          minZoom={3}
+          attributionControl={{ compact: true }}
+        >
+          <MapController mapRef={mapRef} />
+          <MapControls />
+          <SearchInAreaPrompt />
 
-        {/* Marcadores (clusters + individuais) */}
-        {clusters.map((cluster: any) => {
-          const [lng, lat] = cluster.geometry.coordinates;
-          if (cluster.properties.cluster) {
-            const count = cluster.properties.point_count;
-            const size = count < 10 ? 40 : count < 30 ? 46 : 54;
+          {/* Marcadores (clusters + individuais) */}
+          {clusters.map((cluster: any) => {
+            const [lng, lat] = cluster.geometry.coordinates;
+            if (cluster.properties.cluster) {
+              const count = cluster.properties.point_count;
+              const size = count < 10 ? 40 : count < 30 ? 46 : 54;
+              return (
+                <Marker
+                  key={`cluster-${cluster.id}`}
+                  longitude={lng}
+                  latitude={lat}
+                  onClick={(e: MapboxMouseEvent) => {
+                    e.stopPropagation();
+                    const z = expandCluster(cluster.id);
+                    if (z != null && mapRef.current) {
+                      mapRef.current.flyTo({
+                        center: [lng, lat],
+                        zoom: z,
+                        duration: 600,
+                      });
+                    }
+                  }}
+                  anchor="center"
+                >
+                  <div className="marker-cluster" style={{ width: size, height: size }}>
+                    <span>{count}</span>
+                  </div>
+                </Marker>
+              );
+            }
+            const p = cluster.properties.property as Property;
+            const isSelected = p.id === selectedPropertyId;
             return (
               <Marker
-                key={`cluster-${cluster.id}`}
+                key={p.id}
                 longitude={lng}
                 latitude={lat}
-                onClick={(e: MapboxMouseEvent) => {
-                  e.stopPropagation();
-                  const z = expandCluster(cluster.id);
-                  if (z != null && mapRef.current) {
-                    mapRef.current.flyTo({
-                      center: [lng, lat],
-                      zoom: z,
-                      duration: 600,
-                    });
-                  }
-                }}
                 anchor="center"
               >
-                <div className="marker-cluster" style={{ width: size, height: size }}>
-                  <span>{count}</span>
-                </div>
+                <PriceMarker property={p} selected={isSelected} onClick={() => openProperty(p)} />
               </Marker>
             );
-          }
-          const p = cluster.properties.property as Property;
-          const isSelected = p.id === selectedPropertyId;
-          return (
+          })}
+
+          {/* Marcador do usuário */}
+          {userLocation && (() => {
+            // Conta imóveis no mesmo pixel/ponto do user (≤15m de tolerância).
+            // Marca com badge "+N" para sinalizar "tem imóvel aqui" sem
+            // esconder o marker do imóvel.
+            const hereCount = properties.reduce((acc, p) => {
+              const dx = (p.longitude - userLocation.lng) * Math.cos((userLocation.lat * Math.PI) / 180);
+              const dy = p.latitude - userLocation.lat;
+              const dist = Math.sqrt(dx * dx + dy * dy) * 111320; // ~metros
+              return dist <= 25 ? acc + 1 : acc;
+            }, 0);
+            return (
+              <>
+                <Marker longitude={userLocation.lng} latitude={userLocation.lat} anchor="center">
+                  <UserMarker hereCount={hereCount} />
+                </Marker>
+              {userLocation.accuracy && userLocation.accuracy < 500 && (
+                <Source
+                  id="user-accuracy"
+                  type="geojson"
+                  data={{
+                    type: "Feature",
+                    geometry: {
+                      type: "Polygon",
+                      coordinates: [circleCoords(userLocation.lat, userLocation.lng, userLocation.accuracy)],
+                    },
+                  }}
+                >
+                  <Layer
+                    type="fill"
+                    paint={{ "fill-color": "#00D4FF", "fill-opacity": 0.10 }}
+                  />
+                  <Layer
+                    type="line"
+                    paint={{
+                      "line-color": "#00D4FF",
+                      "line-width": 1,
+                      "line-opacity": 0.35,
+                    }}
+                  />
+                </Source>
+              )}
+            </>
+            );
+          })()}
+
+          {/* Imóvel selecionado não na lista atual */}
+          {selectedProperty && !properties.find((p) => p.id === selectedProperty.id) && (
             <Marker
-              key={p.id}
-              longitude={lng}
-              latitude={lat}
+              longitude={selectedProperty.longitude}
+              latitude={selectedProperty.latitude}
               anchor="center"
             >
-              <PriceMarker property={p} selected={isSelected} onClick={() => openProperty(p)} />
+              <PriceMarker property={selectedProperty} selected onClick={() => openProperty(selectedProperty)} />
             </Marker>
-          );
-        })}
+          )}
 
-        {/* Marcador do usuário */}
-        {userLocation && (() => {
-          // Conta imóveis no mesmo pixel/ponto do user (≤15m de tolerância).
-          // Marca com badge "+N" para sinalizar "tem imóvel aqui" sem
-          // esconder o marker do imóvel.
-          const hereCount = properties.reduce((acc, p) => {
-            const dx = (p.longitude - userLocation.lng) * Math.cos((userLocation.lat * Math.PI) / 180);
-            const dy = p.latitude - userLocation.lat;
-            const dist = Math.sqrt(dx * dx + dy * dy) * 111320; // ~metros
-            return dist <= 25 ? acc + 1 : acc;
-          }, 0);
-          return (
-            <>
-              <Marker longitude={userLocation.lng} latitude={userLocation.lat} anchor="center">
-                <UserMarker hereCount={hereCount} />
-              </Marker>
-            {userLocation.accuracy && userLocation.accuracy < 500 && (
-              <Source
-                id="user-accuracy"
-                type="geojson"
-                data={{
-                  type: "Feature",
-                  geometry: {
-                    type: "Polygon",
-                    coordinates: [circleCoords(userLocation.lat, userLocation.lng, userLocation.accuracy)],
-                  },
-                }}
-              >
-                <Layer
-                  type="fill"
-                  paint={{ "fill-color": "#00D4FF", "fill-opacity": 0.10 }}
-                />
-                <Layer
-                  type="line"
-                  paint={{
-                    "line-color": "#00D4FF",
-                    "line-width": 1,
-                    "line-opacity": 0.35,
-                  }}
-                />
-              </Source>
-            )}
-          </>
-          );
-        })()}
-
-        {/* Imóvel selecionado não na lista atual */}
-        {selectedProperty && !properties.find((p) => p.id === selectedProperty.id) && (
-          <Marker
-            longitude={selectedProperty.longitude}
-            latitude={selectedProperty.latitude}
-            anchor="center"
-          >
-            <PriceMarker property={selectedProperty} selected onClick={() => openProperty(selectedProperty)} />
-          </Marker>
-        )}
-
-        <RouteLayer />
-      </Map>
+          <RouteLayer />
+        </Map>
+      )}
       {/* Vignette premium sobre o canvas — profundidade, coesão com o navy do app.
           pointer-events: none para não bloquear a interação com o mapa. */}
       <div className="map-vignette" aria-hidden />
       {/* Grain texture — micro ruído para acabamento físico/matte premium */}
       <div className="map-grain" aria-hidden />
+    </div>
+  );
+}
+
+// ---------- Fallback em lista (quando WebGL2 não disponível) ----------
+function MapFallbackList({
+  properties,
+  onPick,
+}: {
+  properties: Property[];
+  onPick: (p: Property) => void;
+}) {
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const start = page * pageSize;
+  const slice = properties.slice(start, start + pageSize);
+  const total = properties.length;
+  const hasMore = start + slice.length < total;
+  return (
+    <div className="map-fallback" role="region" aria-label="Lista de imóveis (mapa indisponível)">
+      <h3>Seu navegador não suporta mapas interativos</h3>
+      <p>
+        Detectamos que este dispositivo não tem WebGL2 habilitado. A lista
+        abaixo mostra os mesmos imóveis do mapa — clique em um para abrir os
+        detalhes. Tente atualizar o navegador ou habilitar a aceleração de
+        hardware para uma experiência completa.
+      </p>
+      {slice.length === 0 ? (
+        <p style={{ opacity: 0.55 }}>Nenhum imóvel encontrado para os filtros atuais.</p>
+      ) : (
+        <>
+          <div className="map-fallback-list">
+            {slice.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="item"
+                onClick={() => onPick(p)}
+              >
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="title">{p.title}</div>
+                  <div className="local">
+                    {[p.neighborhood, p.city].filter(Boolean).join(" • ") || "—"}
+                  </div>
+                </div>
+                <div className="price">{formatPrice(p.price, p.purpose)}</div>
+              </button>
+            ))}
+          </div>
+          {(page > 0 || hasMore) && (
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button
+                type="button"
+                onClick={() => setPage((x) => Math.max(0, x - 1))}
+                disabled={page === 0}
+                className="px-3 py-1.5 rounded-md bg-secondary text-secondary-foreground text-sm disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((x) => x + 1)}
+                disabled={!hasMore}
+                className="px-3 py-1.5 rounded-md bg-secondary text-secondary-foreground text-sm disabled:opacity-40"
+              >
+                Próxima
+              </button>
+              <span style={{ fontSize: "0.75rem", opacity: 0.55, alignSelf: "center" }}>
+                Mostrando {start + 1}–{start + slice.length} de {total}
+              </span>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

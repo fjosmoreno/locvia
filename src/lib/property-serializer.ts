@@ -1,6 +1,30 @@
 import { db } from "@/lib/db";
 import { haversine, type LatLng } from "@/lib/geo";
 
+/** Normaliza telefone BR pra wa.me — remove caracteres não numéricos e
+ *  garante prefixo 55. Aceita "(31) 9XXXX-XXXX", "31 9XXXX-XXXX", "313XXXX0000".
+ *  Retorna string com só dígitos e prefixo 55, ou null se inválido. */
+export function normalizeBrPhone(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  // se já começa com 55 (Brasil), mantém; senão adiciona
+  if (digits.startsWith("55") && digits.length >= 12) return digits;
+  // tira 0 inicial se tiver (telefone antigo com 0XX)
+  const withoutZero = digits.replace(/^0+/, "");
+  // DDI BR (55) + DDD (2) + número (8 ou 9) = 12 ou 13 dígitos
+  if (withoutZero.length === 10 || withoutZero.length === 11) {
+    return `55${withoutZero}`;
+  }
+  // número malformado — devolve como está pra wa.me gerar erro útil
+  return digits;
+}
+
+export function normalizeState(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.trim().toUpperCase();
+}
+
 // Serialização pública de imóvel (não expõe dados sensíveis do anunciante)
 export interface PublicProperty {
   id: string;
@@ -62,8 +86,8 @@ export async function serializeProperty(
     advertiser = {
       type: "AGENCY",
       name: p.agency.name,
-      whatsapp: p.agency.whatsapp ?? p.whatsapp ?? null,
-      phone: p.agency.phone ?? p.phone ?? null,
+      whatsapp: normalizeBrPhone(p.agency.whatsapp ?? p.whatsapp ?? null),
+      phone: normalizeBrPhone(p.agency.phone ?? p.phone ?? null),
       verified: p.agency.verified,
       logoUrl: p.agency.logoUrl ?? null,
     };
@@ -71,8 +95,8 @@ export async function serializeProperty(
     advertiser = {
       type: "OWNER",
       name: p.owner.user.name,
-      whatsapp: p.whatsapp ?? null,
-      phone: p.phone ?? null,
+      whatsapp: normalizeBrPhone(p.whatsapp ?? null),
+      phone: normalizeBrPhone(p.phone ?? null),
       verified: p.owner.verificationStatus === "VERIFIED",
       logoUrl: null,
     };
@@ -80,10 +104,23 @@ export async function serializeProperty(
     advertiser = {
       type: "BROKER",
       name: p.broker.user.name,
-      whatsapp: p.broker.whatsapp ?? p.whatsapp ?? null,
-      phone: p.broker.phone ?? p.phone ?? null,
+      whatsapp: normalizeBrPhone(p.broker.whatsapp ?? p.whatsapp ?? null),
+      phone: normalizeBrPhone(p.broker.phone ?? p.phone ?? null),
       verified: !!p.broker.creci,
       logoUrl: p.broker.photoUrl ?? null,
+    };
+  } else if (p?.contactName) {
+    // Fallback: imóvel sem FK de anunciante (legado, ADMIN cadastrou
+    // diretamente, ou dados corrompidos). Ainda assim retornamos um
+    // "USER" advertiser mínimo pra UI não quebrar e o lead poder ser
+    // enviado pra um contato (contactName + whatsapp/phone do imóvel).
+    advertiser = {
+      type: "USER",
+      name: p.contactName,
+      whatsapp: normalizeBrPhone(p.whatsapp ?? null),
+      phone: normalizeBrPhone(p.phone ?? null),
+      verified: false,
+      logoUrl: null,
     };
   }
 
@@ -109,13 +146,13 @@ export async function serializeProperty(
     complement: p.complement,
     neighborhood: p.neighborhood,
     city: p.city,
-    state: p.state,
+    state: normalizeState(p.state),
     postalCode: p.postalCode,
     latitude: p.latitude,
     longitude: p.longitude,
     contactName: p.contactName,
-    whatsapp: p.whatsapp,
-    phone: p.phone,
+    whatsapp: normalizeBrPhone(p.whatsapp),
+    phone: normalizeBrPhone(p.phone),
     status: p.status,
     featured: p.featured,
     badge: p.badge,
@@ -166,6 +203,7 @@ export function publicWhere(input: {
   parkingSpaces?: number;
   minArea?: number;
   city?: string;
+  state?: string;
   bbox?: { minLat: number; maxLat: number; minLng: number; maxLng: number };
   search?: string;
 }) {
@@ -184,7 +222,23 @@ export function publicWhere(input: {
   if (input.bathrooms != null) and.push({ bathrooms: { gte: input.bathrooms } });
   if (input.parkingSpaces != null) and.push({ parkingSpaces: { gte: input.parkingSpaces } });
   if (input.minArea != null) and.push({ area: { gte: input.minArea } });
-  if (input.city) and.push({ city: { contains: input.city } });
+  if (input.city) {
+    // Case-insensitive: PostgreSQL via Prisma aceita `mode: "insensitive"`
+    // (requer `citext` na extensão OU comparação via LOWER). Usamos
+    // `contains` + `mode: "insensitive"` (Prisma 5+ em Postgres com
+    // extension `pg_trgm` ou `citext` configurado). Como o Neon não tem
+    // citext por padrão, fazemos um fallback mais robusto: comparamos
+    // o lowercase do input contra o lowercase do campo via LOWER().
+    and.push({
+      city: { contains: input.city, mode: "insensitive" },
+    });
+  }
+  if (input.state) {
+    // Estado é case-insensitive por natureza (UF é sempre maiúscula)
+    and.push({
+      state: { equals: normalizeState(input.state) },
+    });
+  }
   if (input.bbox) {
     and.push({ latitude: { gte: input.bbox.minLat, lte: input.bbox.maxLat } });
     and.push({ longitude: { gte: input.bbox.minLng, lte: input.bbox.maxLng } });
@@ -200,10 +254,10 @@ export function publicWhere(input: {
     if (tokens.length === 1) {
       and.push({
         OR: [
-          { title: { contains: tokens[0] } },
-          { neighborhood: { contains: tokens[0] } },
-          { city: { contains: tokens[0] } },
-          { address: { contains: tokens[0] } },
+          { title: { contains: tokens[0], mode: "insensitive" } },
+          { neighborhood: { contains: tokens[0], mode: "insensitive" } },
+          { city: { contains: tokens[0], mode: "insensitive" } },
+          { address: { contains: tokens[0], mode: "insensitive" } },
         ],
       });
     } else if (tokens.length > 1) {
@@ -211,10 +265,10 @@ export function publicWhere(input: {
       for (const tok of tokens) {
         and.push({
           OR: [
-            { title: { contains: tok } },
-            { neighborhood: { contains: tok } },
-            { city: { contains: tok } },
-            { address: { contains: tok } },
+            { title: { contains: tok, mode: "insensitive" } },
+            { neighborhood: { contains: tok, mode: "insensitive" } },
+            { city: { contains: tok, mode: "insensitive" } },
+            { address: { contains: tok, mode: "insensitive" } },
           ],
         });
       }

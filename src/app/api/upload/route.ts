@@ -10,12 +10,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, ADVERTISER_ROLES } from "@/lib/session";
 import { uploadMedia, type MediaKind } from "@/lib/storage";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 export const runtime = "nodejs"; // fs + FormData precisam de runtime node, não edge
 
 const MAX_DURATION_SECONDS = 30;
 
 export async function POST(req: NextRequest) {
+  // Upload — limite conservador (10/min) por causa do peso (até 50MB por arquivo).
+  const limited = rateLimitResponse(req, { windowMs: 60_000, max: 10 });
+  if (limited) return limited;
+
   // Apenas anunciantes (imobiliária, proprietário, corretor) podem fazer upload.
   const user = await getSessionUser();
   if (!user) {

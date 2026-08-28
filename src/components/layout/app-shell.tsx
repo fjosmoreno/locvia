@@ -25,10 +25,17 @@ import { FloatingShortcuts } from "@/components/layout/floating-shortcuts";
 import { cn } from "@/lib/utils";
 
 export function AppShell() {
-  const { panelView, selectedPropertyId, openPropertyById } = useUI();
+  const { panelView, selectedPropertyId, openPropertyById, hydrateFromSession } = useUI();
   const searchParams = useSearchParams();
   const router = useRouter();
   const deepLinked = useRef(false);
+
+  // Hidrata o store com sessionStorage DEPOIS do primeiro paint.
+  // Isso evita hydration mismatch (server vs client render diferente)
+  // que faz React re-renderizar tudo várias vezes no boot.
+  useEffect(() => {
+    hydrateFromSession();
+  }, [hydrateFromSession]);
 
   // Deep link: ?imovel=ID
   useEffect(() => {

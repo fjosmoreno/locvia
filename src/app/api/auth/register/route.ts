@@ -2,10 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { ROLES } from "@/lib/constants";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/auth/register
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  // Limite agressivo: registro é caro (bcrypt + emails de boas-vindas).
+  // 10 por minuto por IP deve ser suficiente pra tentativas legítimas,
+  // mas bloqueia scripts maliciosos que tentam criar contas em massa.
+  const limited = rateLimitResponse(req, { windowMs: 60_000, max: 10 });
+  if (limited) return limited;
+
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON inválido." }, { status: 400 });
+  }
   const { email, password, name, phone, role } = body || {};
 
   if (!email || !password || !name) {
