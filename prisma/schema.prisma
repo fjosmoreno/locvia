@@ -1,12 +1,15 @@
 // MapImóvel — Plataforma imobiliária map-first
-// SQLite (sem PostGIS). Consultas geográficas via lat/lng + bounding box no app.
+// Postgres (Neon). Migração 2026-08-28: SQLite → Postgres (Vercel serverless
+// não consegue escrever em SQLite porque /var/task é read-only e não tem
+// persistência entre cold starts). Consultas geográficas continuam via
+// lat/lng + bounding box no app (sem PostGIS por enquanto).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

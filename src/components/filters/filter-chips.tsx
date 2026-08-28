@@ -198,38 +198,41 @@ export function FilterChips() {
           </PopoverContent>
         </Popover>
 
-        {/* Distância — só se localização ativa */}
-        {userLocation && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className={cn("filter-chip shrink-0", filters.radius != null && "is-active")}>
-                Distância
-                {filters.radius != null && (
-                  <span className="chip-count">
-                    {DISTANCE_OPTIONS.find((d) => d.value === filters.radius)?.label.replace(" ", "")}
-                  </span>
+        {/* Distância — sempre disponível; usa userLocation se tiver, senão centro do mapa */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={cn("filter-chip shrink-0", filters.radius != null && "is-active")}>
+              Distância
+              {filters.radius != null && (
+                <span className="chip-count">
+                  {DISTANCE_OPTIONS.find((d) => d.value === filters.radius)?.label.replace(" ", "")}
+                </span>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-1.5" align="start">
+            {DISTANCE_OPTIONS.map((d) => (
+              <button
+                key={d.value}
+                onClick={() => setFilters({ radius: d.value || undefined })}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between",
+                  filters.radius === d.value
+                    ? "bg-accent text-accent-foreground font-medium"
+                    : "hover:bg-accent/50"
                 )}
+              >
+                {d.label}
+                {filters.radius === d.value && <Check className="w-3.5 h-3.5 text-primary" />}
               </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-44 p-1.5" align="start">
-              {DISTANCE_OPTIONS.map((d) => (
-                <button
-                  key={d.value}
-                  onClick={() => setFilters({ radius: d.value || undefined })}
-                  className={cn(
-                    "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between",
-                    filters.radius === d.value
-                      ? "bg-accent text-accent-foreground font-medium"
-                      : "hover:bg-accent/50"
-                  )}
-                >
-                  {d.label}
-                  {filters.radius === d.value && <Check className="w-3.5 h-3.5 text-primary" />}
-                </button>
-              ))}
-            </PopoverContent>
-          </Popover>
-        )}
+            ))}
+            {!userLocation && (
+              <p className="text-[10.5px] text-muted-foreground/80 mt-1.5 px-3 leading-snug">
+                Raio a partir do centro do mapa. Ative a localização para usar a sua.
+              </p>
+            )}
+          </PopoverContent>
+        </Popover>
 
         {/* Mais filtros (sheet avançado) */}
         <button

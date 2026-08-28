@@ -129,31 +129,32 @@ export function FilterSheet() {
             </div>
           </section>
 
-          {userLocation && (
-            <>
-              <Separator />
-              <section className="space-y-2">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Distância máxima
-                </Label>
-                <Select
-                  value={String(filters.radius ?? 0)}
-                  onValueChange={(v) => setFilters({ radius: Number(v) || undefined })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DISTANCE_OPTIONS.map((d) => (
-                      <SelectItem key={d.value} value={String(d.value)}>
-                        {d.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </section>
-            </>
-          )}
+          <Separator />
+          <section className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Distância máxima{!userLocation && " (do centro do mapa)"}
+            </Label>
+            <Select
+              value={String(filters.radius ?? 0)}
+              onValueChange={(v) => setFilters({ radius: Number(v) || undefined })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DISTANCE_OPTIONS.map((d) => (
+                  <SelectItem key={d.value} value={String(d.value)}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground/80 leading-snug">
+              {userLocation
+                ? "A partir da sua localização atual."
+                : "Ative a localização para usar a sua, ou use o centro do mapa."}
+            </p>
+          </section>
 
           <Separator />
 
