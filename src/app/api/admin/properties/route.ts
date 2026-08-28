@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
     featured,
     badge,
     images, // array de URLs já upadas
+    video, // { url, duration, thumbnail } | null
   } = body || {};
 
   // ===== Validações =====
@@ -186,6 +187,25 @@ export async function POST(req: NextRequest) {
           sortOrder: i,
           isPrimary: i === 0,
         })),
+      });
+    }
+
+    // vídeo (opcional, um por anúncio)
+    if (video && typeof video === "object" && (video as any).url) {
+      const v = video as {
+        url: string;
+        duration?: number;
+        thumbnail?: string | null;
+      };
+      await tx.propertyVideo.create({
+        data: {
+          propertyId: property.id,
+          url: String(v.url),
+          duration: Math.max(0, Math.min(60, Math.round(Number(v.duration) || 0))),
+          thumbnail: typeof v.thumbnail === "string" ? v.thumbnail : null,
+          sortOrder: 0,
+          isPrimary: true,
+        },
       });
     }
 

@@ -25,6 +25,7 @@ import {
   Sparkles,
   Tag,
   Check,
+  PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -378,6 +379,30 @@ export function PropertyDetail({ propertyId }: { propertyId: string }) {
             )}
           </div>
         </div>
+
+        {/* ===== VÍDEO (opcional, ≤30s) ===== */}
+        {p.videos && p.videos.length > 0 && (
+          <div className="px-4 pb-4">
+            <div className="eyebrow mb-2 flex items-center gap-1.5">
+              <PlayCircle className="w-3.5 h-3.5 text-primary" />
+              Vídeo do imóvel
+            </div>
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-border bg-muted group">
+              <video
+                src={p.videos[0].url}
+                poster={p.videos[0].thumbnail || undefined}
+                className="w-full h-full object-cover"
+                controls
+                playsInline
+                preload="metadata"
+              />
+              <div className="absolute top-2 left-2 bg-foreground/80 text-background text-[10px] font-semibold px-1.5 py-0.5 rounded flex items-center gap-1 pointer-events-none">
+                <PlayCircle className="w-3 h-3" />
+                {p.videos[0].duration.toFixed(1)}s
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ===== BLOCO PREÇO + LOCALIZAÇÃO (protagonista) ===== */}
         <div className="px-4 pb-4">

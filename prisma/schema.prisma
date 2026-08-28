@@ -163,6 +163,7 @@ model Property {
   updatedAt    DateTime @updatedAt
 
   images    PropertyImage[]
+  videos    PropertyVideo[]
   favorites Favorite[]
   leads     Lead[]
   reports   Report[]
@@ -183,6 +184,26 @@ model PropertyImage {
   url        String
   sortOrder  Int      @default(0)
   isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId])
+}
+
+model PropertyVideo {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  url        String
+  // duração em segundos (validado client-side, máx 30s)
+  duration   Int      @default(0)
+  // thumbnail opcional (frame extraído do vídeo)
+  thumbnail  String?
+  sortOrder  Int      @default(0)
+  isPrimary  Boolean  @default(false)
+  // mime: video/mp4, video/webm, video/quicktime
+  mimeType   String?
+  // tamanho em bytes
+  size       Int      @default(0)
   createdAt  DateTime @default(now())
 
   @@index([propertyId])

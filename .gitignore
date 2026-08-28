@@ -64,6 +64,8 @@ server.log
 /tool-results/
 # uploads temporários (screenshots do user)
 /upload/
+# uploads de dev (fallback do storage helper em local sem BLOB_READ_WRITE_TOKEN)
+/public/uploads/
 # SQLite dev (custom.db, dev.db, etc)
 db/*.db
 db/*.sqlite

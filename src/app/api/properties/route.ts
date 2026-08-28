@@ -169,6 +169,27 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // vídeo (opcional, um por anúncio)
+  if (body.video && typeof body.video === "object" && body.video.url) {
+    const v = body.video as {
+      url: string;
+      duration?: number;
+      thumbnail?: string | null;
+    };
+    if (typeof v.url === "string" && v.url.length > 0) {
+      await db.propertyVideo.create({
+        data: {
+          propertyId: created.id,
+          url: v.url,
+          duration: Math.max(0, Math.min(60, Math.round(Number(v.duration) || 0))),
+          thumbnail: typeof v.thumbnail === "string" ? v.thumbnail : null,
+          sortOrder: 0,
+          isPrimary: true,
+        },
+      });
+    }
+  }
+
   const full = await db.property.findUnique({ where: { id: created.id }, include: propertyInclude });
   return NextResponse.json({ property: await serializeProperty(full!) }, { status: 201 });
 }

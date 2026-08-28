@@ -25,6 +25,10 @@ import {
   UserRound,
   ChevronLeft,
   ChevronRight,
+  Video,
+  Crosshair,
+  PlayCircle,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -36,6 +40,15 @@ import {
 import type { Property } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+interface PropertyVideo {
+  id: string;
+  url: string;
+  duration: number;
+  thumbnail: string | null;
+  isPrimary: boolean;
+  sortOrder: number;
+}
+
 interface PropertyFormProps {
   editProperty?: Property | null;
   onDone: () => void;
@@ -46,6 +59,14 @@ interface GeoResult {
   lat: number;
   lng: number;
   displayName: string;
+}
+
+interface UploadedVideo {
+  url: string;
+  duration: number;
+  thumbnail: string | null;
+  size: number;
+  mimeType: string;
 }
 
 const EMPTY = {
@@ -73,17 +94,21 @@ const EMPTY = {
   whatsapp: "",
   phone: "",
   images: [] as string[],
+  video: null as UploadedVideo | null,
 };
 
 type FormState = typeof EMPTY;
 
-const ALLOWED_MIME = [
+const ALLOWED_IMAGE_MIME = [
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/jpg",
 ];
-const MAX_BYTES = 8 * 1024 * 1024;
+const ALLOWED_VIDEO_MIME = ["video/mp4", "video/webm", "video/quicktime"];
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+const MAX_VIDEO_SECONDS = 30;
 
 export function PropertyForm({
   editProperty,
@@ -96,10 +121,18 @@ export function PropertyForm({
   const [form, setForm] = useState<FormState>({ ...EMPTY });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [videoPreview, setVideoPreview] = useState<{
+    url: string;
+    duration: number;
+    thumbnail: string | null;
+  } | null>(null);
   const [geoQuery, setGeoQuery] = useState("");
   const [geoResults, setGeoResults] = useState<GeoResult[]>([]);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoOpen, setGeoOpen] = useState(false);
+  const [autoGeoLoading, setAutoGeoLoading] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize form when editProperty changes (or when entering create mode)
@@ -113,9 +146,11 @@ export function PropertyForm({
       });
       setGeoQuery("");
       setGeoResults([]);
+      setVideoPreview(null);
       return;
     }
     const p = editProperty;
+    const existingVideo = p.videos?.[0];
     setForm({
       title: p.title || "",
       purpose: p.purpose || "RENT",
@@ -141,10 +176,37 @@ export function PropertyForm({
       whatsapp: p.whatsapp || defaultContact?.phone || "",
       phone: p.phone || defaultContact?.phone || "",
       images: p.images.map((im) => im.url),
+      video: existingVideo
+        ? {
+            url: existingVideo.url,
+            duration: existingVideo.duration,
+            thumbnail: existingVideo.thumbnail,
+            size: 0,
+            mimeType: "",
+          }
+        : null,
     });
+    setVideoPreview(
+      existingVideo
+        ? {
+            url: existingVideo.url,
+            duration: existingVideo.duration,
+            thumbnail: existingVideo.thumbnail,
+          }
+        : null
+    );
     setGeoQuery(p.address ? `${p.address}${p.number ? ", " + p.number : ""}` : "");
     setGeoResults([]);
   }, [editProperty]);
+
+  // Limpa o object URL do preview de vídeo ao desmontar/trocar
+  useEffect(() => {
+    return () => {
+      if (videoPreview?.url && videoPreview.url.startsWith("blob:")) {
+        URL.revokeObjectURL(videoPreview.url);
+      }
+    };
+  }, [videoPreview]);
 
   // debounced geocode lookup
   useEffect(() => {
@@ -210,11 +272,11 @@ export function PropertyForm({
     if (!files || !files.length) return;
     const valid: File[] = [];
     for (const f of Array.from(files)) {
-      if (!ALLOWED_MIME.includes(f.type)) {
+      if (!ALLOWED_IMAGE_MIME.includes(f.type)) {
         toast.error(`${f.name}: formato não suportado. Use JPG, PNG ou WebP.`);
         continue;
       }
-      if (f.size > MAX_BYTES) {
+      if (f.size > MAX_IMAGE_BYTES) {
         toast.error(`${f.name}: excede o limite de 8MB.`);
         continue;
       }
@@ -228,6 +290,7 @@ export function PropertyForm({
       for (const f of valid) {
         const fd = new FormData();
         fd.append("file", f);
+        fd.append("kind", "image");
         const res = await fetch("/api/upload", { method: "POST", body: fd });
         const d = await res.json();
         if (!res.ok) {
@@ -238,7 +301,11 @@ export function PropertyForm({
       }
       if (uploaded.length) {
         setForm((f) => ({ ...f, images: [...f.images, ...uploaded] }));
-        toast.success(`${uploaded.length} imagem(ns) adicionada(s).`);
+        toast.success(
+          uploaded.length === 1
+            ? "Imagem adicionada."
+            : `${uploaded.length} imagens adicionadas.`
+        );
       }
     } finally {
       setUploading(false);
@@ -258,6 +325,186 @@ export function PropertyForm({
     });
   }
 
+  // ============== UPLOAD DE VÍDEO ==============
+  function readVideoMeta(
+    file: File
+  ): Promise<{ duration: number; thumbnail: string | null }> {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.muted = true;
+      v.playsInline = true;
+      v.src = url;
+      const cleanup = () => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+      };
+      v.onloadedmetadata = () => {
+        const dur = Number.isFinite(v.duration) ? v.duration : 0;
+        // Captura thumbnail no segundo 1 (ou 0 se for muito curto)
+        const seekTo = Math.min(1, Math.max(0, dur / 2));
+        v.currentTime = seekTo;
+      };
+      v.onseeked = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const w = 320;
+          const ratio = v.videoHeight / Math.max(1, v.videoWidth);
+          canvas.width = w;
+          canvas.height = Math.round(w * ratio);
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+            const thumb = canvas.toDataURL("image/jpeg", 0.7);
+            cleanup();
+            resolve({ duration: v.duration, thumbnail: thumb });
+          } else {
+            cleanup();
+            resolve({ duration: v.duration, thumbnail: null });
+          }
+        } catch {
+          cleanup();
+          resolve({ duration: v.duration, thumbnail: null });
+        }
+      };
+      v.onerror = () => {
+        cleanup();
+        resolve({ duration: 0, thumbnail: null });
+      };
+    });
+  }
+
+  async function handleVideoUpload(file: File | null) {
+    if (!file) return;
+    if (!ALLOWED_VIDEO_MIME.includes(file.type)) {
+      toast.error("Formato não suportado. Use MP4, WebM ou MOV.");
+      return;
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      toast.error(`Vídeo excede o limite de 50MB.`);
+      return;
+    }
+
+    setUploadingVideo(true);
+    try {
+      const { duration, thumbnail } = await readVideoMeta(file);
+      if (duration <= 0) {
+        toast.error("Não foi possível ler a duração do vídeo.");
+        return;
+      }
+      if (duration > MAX_VIDEO_SECONDS) {
+        toast.error(
+          `O vídeo tem ${duration.toFixed(1)}s. Limite permitido: ${MAX_VIDEO_SECONDS}s.`
+        );
+        return;
+      }
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("kind", "video");
+      fd.append("duration", String(duration));
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const d = await res.json();
+      if (!res.ok) {
+        toast.error(d.error || "Falha no upload do vídeo.");
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        video: {
+          url: d.url,
+          duration,
+          thumbnail,
+          size: file.size,
+          mimeType: file.type,
+        },
+      }));
+      setVideoPreview({ url: d.url, duration, thumbnail });
+      toast.success("Vídeo enviado.");
+    } finally {
+      setUploadingVideo(false);
+    }
+  }
+
+  function removeVideo() {
+    setForm((f) => ({ ...f, video: null }));
+    setVideoPreview(null);
+  }
+
+  // ============== AUTOCOMPLETAR CEP (ViaCEP) ==============
+  async function lookupCep(cep: string) {
+    const digits = cep.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const res = await fetch(`/api/geocode/cep?cep=${digits}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      const data = json.data;
+      if (!data) return;
+      setForm((f) => ({
+        ...f,
+        // só preenche se o usuário não tiver digitado (mantém o que está)
+        neighborhood: f.neighborhood || data.bairro || "",
+        city: f.city || data.localidade || "",
+        state: f.state || data.uf || "",
+        address: f.address || data.logradouro || "",
+      }));
+      toast.success("Endereço preenchido pelo CEP.");
+      // Após preencher pelo CEP, tenta geocodificar automaticamente
+      // pra já deixar lat/lng prontos.
+      void autoGeocodeFromForm();
+    } catch {
+      // silencioso — CEP pode não existir na base
+    } finally {
+      setCepLoading(false);
+    }
+  }
+
+  // ============== AUTO-GEOCODE: usa campos atuais do form ==============
+  async function autoGeocodeFromForm(): Promise<boolean> {
+    if (!form.address && !form.postalCode && !form.city) {
+      toast.error(
+        "Preencha pelo menos o endereço, CEP ou cidade antes de buscar as coordenadas."
+      );
+      return false;
+    }
+    setAutoGeoLoading(true);
+    try {
+      const res = await fetch("/api/geocode/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: form.address,
+          number: form.number,
+          neighborhood: form.neighborhood,
+          city: form.city,
+          state: form.state,
+          postalCode: form.postalCode,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        toast.error(d.error || "Não foi possível localizar o endereço.");
+        return false;
+      }
+      setForm((f) => ({
+        ...f,
+        latitude: String(d.result.lat),
+        longitude: String(d.result.lng),
+      }));
+      if (errors.location) setErrors((e) => ({ ...e, location: "" }));
+      toast.success("Localização definida automaticamente.");
+      return true;
+    } catch {
+      toast.error("Falha ao consultar localização.");
+      return false;
+    } finally {
+      setAutoGeoLoading(false);
+    }
+  }
+
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!form.title.trim()) e.title = "Título obrigatório";
@@ -272,7 +519,7 @@ export function PropertyForm({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const body = {
+      const body: Record<string, unknown> = {
         title: form.title.trim(),
         purpose: form.purpose,
         propertyType: form.propertyType,
@@ -297,6 +544,13 @@ export function PropertyForm({
         whatsapp: form.whatsapp.trim() || null,
         phone: form.phone.trim() || null,
         images: form.images,
+        video: form.video
+          ? {
+              url: form.video.url,
+              duration: form.video.duration,
+              thumbnail: form.video.thumbnail,
+            }
+          : null,
       };
       const url = isEdit
         ? `/api/properties/${editProperty!.id}`
@@ -489,7 +743,7 @@ export function PropertyForm({
       <Section title="Localização" eyebrow="Passo 2" icon={<MapPin className="w-4 h-4" />}>
         <div className="relative">
           <Label className="eyebrow !text-[10px] text-muted-foreground/80">
-            Buscar endereço
+            Buscar endereço (sugestões)
           </Label>
           <div className="relative mt-1.5">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -537,6 +791,22 @@ export function PropertyForm({
           )}
         </div>
 
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={autoGeocodeFromForm}
+          disabled={autoGeoLoading}
+          className="w-full h-9 border-primary/40 text-primary hover:bg-primary/10 hover:border-primary"
+        >
+          {autoGeoLoading ? (
+            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+          ) : (
+            <Crosshair className="w-4 h-4 mr-1.5" />
+          )}
+          Buscar coordenadas automaticamente
+        </Button>
+
         {form.latitude && form.longitude ? (
           <div className="flex items-center gap-2 text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-md px-3 py-2">
             <MapPin className="w-3.5 h-3.5 text-emerald-400" />
@@ -547,21 +817,34 @@ export function PropertyForm({
           </div>
         ) : (
           <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
-            Selecione um endereço na busca para definir a localização.
+            Preencha o CEP ou o endereço abaixo e clique em &quot;Buscar
+            coordenadas&quot;.
           </p>
         )}
         <p className="text-[11px] text-muted-foreground">
-          Ajuste o ponto se necessário.
+          O ponto é gerado a partir do endereço. Você pode ajustar depois.
         </p>
 
         <div className="grid grid-cols-3 gap-3">
           <Field label="CEP">
-            <Input
-              value={form.postalCode}
-              onChange={(e) => set("postalCode", e.target.value)}
-              placeholder="00000-000"
-              className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums"
-            />
+            <div className="relative">
+              <Input
+                value={form.postalCode}
+                onChange={(e) => set("postalCode", e.target.value)}
+                onBlur={(e) => {
+                  const v = e.target.value;
+                  if (v.replace(/\D/g, "").length === 8) {
+                    void lookupCep(v);
+                  }
+                }}
+                placeholder="00000-000"
+                className="h-9 bg-card/60 border-border/60 focus-visible:border-primary tabular-nums pr-9"
+                maxLength={9}
+              />
+              {cepLoading && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-primary" />
+              )}
+            </div>
           </Field>
           <Field label="Endereço" className="col-span-2">
             <Input
@@ -706,6 +989,72 @@ export function PropertyForm({
           </div>
           <p className="text-[11px] text-muted-foreground mt-1.5">
             A primeira imagem é a foto de capa. Use as setas para reordenar.
+          </p>
+        </div>
+
+        {/* Vídeo (até 30s) */}
+        <div>
+          <Label className="eyebrow !text-[10px] text-muted-foreground/80 flex items-center gap-1.5">
+            <Video className="w-3 h-3" /> Vídeo (opcional, até {MAX_VIDEO_SECONDS}s)
+          </Label>
+          {form.video || videoPreview ? (
+            <div className="mt-2 relative w-full max-w-xs aspect-video rounded-lg overflow-hidden border bg-muted ring-1 ring-border/40 group">
+              <video
+                src={videoPreview?.url || form.video?.url}
+                poster={videoPreview?.thumbnail || form.video?.thumbnail || undefined}
+                className="w-full h-full object-cover"
+                controls
+                playsInline
+                preload="metadata"
+              />
+              <div className="absolute top-1.5 left-1.5 bg-foreground/80 text-background text-[9px] font-semibold px-1.5 py-0.5 rounded flex items-center gap-1">
+                <PlayCircle className="w-3 h-3" />
+                {(videoPreview?.duration ?? form.video?.duration ?? 0).toFixed(1)}s
+              </div>
+              <button
+                type="button"
+                onClick={removeVideo}
+                aria-label="Remover vídeo"
+                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-white grid place-items-center hover:bg-black/90"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <label
+              className={cn(
+                "mt-2 w-full max-w-xs aspect-video rounded-lg border-2 border-dashed grid place-items-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5 text-muted-foreground",
+                uploadingVideo && "opacity-60 pointer-events-none"
+              )}
+            >
+              {uploadingVideo ? (
+                <div className="flex flex-col items-center gap-1.5">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <span className="text-[11px]">Enviando…</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1.5 py-4">
+                  <Video className="w-6 h-6" />
+                  <span className="text-xs font-medium">Enviar vídeo do computador</span>
+                  <span className="text-[10px] text-muted-foreground/80">
+                    MP4, WebM ou MOV · até {MAX_VIDEO_SECONDS}s · máx 50MB
+                  </span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.currentTarget.files?.[0] || null;
+                  void handleVideoUpload(f);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </label>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-1.5">
+            Mostre o imóvel em movimento. Apenas um vídeo por anúncio.
           </p>
         </div>
       </Section>

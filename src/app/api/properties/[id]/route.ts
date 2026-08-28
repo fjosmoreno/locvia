@@ -103,6 +103,28 @@ export async function PUT(
     }
   }
 
+  // Replacing video (opcional, um por anúncio)
+  if (body.video !== undefined) {
+    await db.propertyVideo.deleteMany({ where: { propertyId: id } });
+    if (body.video && typeof body.video === "object" && body.video.url) {
+      const v = body.video as {
+        url: string;
+        duration?: number;
+        thumbnail?: string | null;
+      };
+      await db.propertyVideo.create({
+        data: {
+          propertyId: id,
+          url: String(v.url),
+          duration: Math.max(0, Math.min(60, Math.round(Number(v.duration) || 0))),
+          thumbnail: typeof v.thumbnail === "string" ? v.thumbnail : null,
+          sortOrder: 0,
+          isPrimary: true,
+        },
+      });
+    }
+  }
+
   const full = await db.property.findUnique({ where: { id }, include: propertyInclude });
   return NextResponse.json({ property: await serializeProperty(full!) });
 }

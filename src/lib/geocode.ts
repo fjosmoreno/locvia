@@ -10,13 +10,46 @@ export interface GeoResult {
   type?: string;
 }
 
+export interface ViaCepResult {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  ibge?: string;
+  gia?: string;
+  ddd?: string;
+  siafi?: string;
+  erro?: boolean;
+}
+
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
+const VIACEP_BASE = "https://viacep.com.br/ws";
 
 const country = "BR";
 const headers = {
   "Accept-Language": "pt-BR",
   "User-Agent": "LOCVIA/1.0 (MVP)",
 };
+
+/** Busca CEP brasileiro via ViaCEP (gratuito, sem chave). Retorna null se não encontrado. */
+export async function lookupCep(rawCep: string): Promise<ViaCepResult | null> {
+  const digits = rawCep.replace(/\D/g, "").slice(0, 8);
+  if (digits.length !== 8) return null;
+  try {
+    const res = await fetch(`${VIACEP_BASE}/${digits}/json/`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as ViaCepResult;
+    if (data.erro) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
 
 /** Busca endereço/bairro/cidade por texto. Retorna múltiplas sugestões. */
 export async function searchAddress(query: string, limit = 6): Promise<GeoResult[]> {
@@ -54,6 +87,7 @@ export async function geocodeAddress(parts: {
   state?: string;
   postalCode?: string;
 }): Promise<GeoResult | null> {
+  // Tentativa 1: structured (street/number/postalcode)
   const street = [parts.number, parts.street].filter(Boolean).join(" ");
   const params = new URLSearchParams({
     format: "jsonv2",
@@ -65,27 +99,45 @@ export async function geocodeAddress(parts: {
   if (parts.city) params.set("city", parts.city);
   if (parts.state) params.set("state", parts.state);
   if (parts.postalCode) params.set("postalcode", parts.postalCode);
-  const q = [parts.neighborhood, parts.city].filter(Boolean).join(", ");
-  if (q) params.set("q", q);
 
-  const url = `${NOMINATIM_BASE}/search?${params.toString()}`;
-  try {
-    const res = await fetch(url, { headers });
-    if (!res.ok) return null;
-    const data = (await res.json()) as Array<{
-      lat: string;
-      lon: string;
-      display_name: string;
-    }>;
-    if (!data.length) return null;
-    return {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon),
-      displayName: data[0].display_name,
-    };
-  } catch {
-    return null;
-  }
+  const tryStructured = async (): Promise<GeoResult | null> => {
+    const url = `${NOMINATIM_BASE}/search?${params.toString()}`;
+    try {
+      const res = await fetch(url, { headers });
+      if (!res.ok) return null;
+      const data = (await res.json()) as Array<{
+        lat: string;
+        lon: string;
+        display_name: string;
+      }>;
+      if (!data.length) return null;
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+        displayName: data[0].display_name,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const first = await tryStructured();
+  if (first) return first;
+
+  // Tentativa 2: free-text query (Nominatim é estricto com street=+number=,
+  // então se o número exato não existe no OSM, caímos pra query livre com bairro)
+  const freeText = [
+    parts.number,
+    parts.street,
+    parts.neighborhood,
+    parts.city,
+    parts.state,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  if (!freeText) return null;
+  const fallback = await searchAddress(freeText, 1);
+  return fallback[0] ?? null;
 }
 
 /** Monta URL de navegação "como chegar" no serviço de mapas do dispositivo. */

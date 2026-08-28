@@ -34,6 +34,14 @@ export interface PublicProperty {
   lastConfirmedAt: string | null;
   createdAt: string;
   images: { id: string; url: string; isPrimary: boolean; sortOrder: number }[];
+  videos: {
+    id: string;
+    url: string;
+    duration: number;
+    thumbnail: string | null;
+    isPrimary: boolean;
+    sortOrder: number;
+  }[];
   advertiser: {
     type: string;
     name: string;
@@ -122,6 +130,16 @@ export async function serializeProperty(
         isPrimary: im.isPrimary,
         sortOrder: im.sortOrder,
       })),
+    videos: (p.videos ?? [])
+      .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+      .map((v: any) => ({
+        id: v.id,
+        url: v.url,
+        duration: v.duration,
+        thumbnail: v.thumbnail ?? null,
+        isPrimary: v.isPrimary,
+        sortOrder: v.sortOrder,
+      })),
     advertiser,
     distance,
   };
@@ -129,6 +147,7 @@ export async function serializeProperty(
 
 const includeAdvertiser = {
   images: true,
+  videos: true,
   agency: { select: { name: true, whatsapp: true, phone: true, verified: true, logoUrl: true } },
   owner: { select: { verificationStatus: true, user: { select: { name: true } } } },
   broker: { select: { creci: true, whatsapp: true, phone: true, photoUrl: true, user: { select: { name: true } } } },

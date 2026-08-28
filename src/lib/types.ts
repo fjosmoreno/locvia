@@ -7,6 +7,15 @@ export interface PropertyImage {
   sortOrder: number;
 }
 
+export interface PropertyVideo {
+  id: string;
+  url: string;
+  duration: number;
+  thumbnail: string | null;
+  isPrimary: boolean;
+  sortOrder: number;
+}
+
 export interface Advertiser {
   type: string;
   name: string;
@@ -48,6 +57,7 @@ export interface Property {
   lastConfirmedAt: string | null;
   createdAt: string;
   images: PropertyImage[];
+  videos: PropertyVideo[];
   advertiser: Advertiser | null;
   distance?: number;
 }
