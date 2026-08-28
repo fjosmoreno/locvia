@@ -62,11 +62,20 @@ function MiniMap({ lat, lng }: { lat: number; lng: number }) {
     for (let dx = -1; dx <= 1; dx++) tiles.push({ dx, dy });
   return (
     <div className="relative w-full aspect-[16/8] rounded-2xl overflow-hidden border border-border bg-[#0c1424]">
-      <div className="grid grid-cols-3 grid-rows-3 w-[300%] h-[300%] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      {/* Grid 3x3 de tiles — OpenStreetMap (grátis, sem chave).
+          Filtro CSS dark + overlay navy pra integrar com o tema LOCVIA
+          (mesma estratégia do mapa principal em map-view.tsx, que usa
+          MapTiler → fallback OSM com raster-saturation/brightness). */}
+      <div
+        className="grid grid-cols-3 grid-rows-3 w-[300%] h-[300%] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{
+          filter:
+            "invert(1) hue-rotate(180deg) saturate(0.55) brightness(0.94) contrast(0.88)",
+        }}
+      >
         {tiles.map(({ dx, dy }) => {
-          const sub = ["a", "b", "c", "d"][Math.abs((x + dx + y + dy) % 4)];
-          // CARTO dark tiles — integra com o navy do tema
-          const url = `https://${sub}.basemaps.cartocdn.com/dark_all/${z}/${x + dx}/${y + dy}.png`;
+          const sub = ["a", "b", "c"][Math.abs(x + dx + y + dy) % 3];
+          const url = `https://${sub}.tile.openstreetmap.org/${z}/${x + dx}/${y + dy}.png`;
           return (
             <img
               key={`${dx}-${dy}`}
@@ -78,6 +87,16 @@ function MiniMap({ lat, lng }: { lat: number; lng: number }) {
           );
         })}
       </div>
+      {/* Overlay navy translúcido — integra o tile OSM com o fundo do app
+          e dá o tom premium do tema. mix-blend-multiply tinge sem apagar. */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(11,31,58,0.10) 0%, rgba(11,31,58,0.22) 100%)",
+          mixBlendMode: "multiply",
+        }}
+      />
       {/* Halo glow sob o marcador */}
       <div
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full w-16 h-16 rounded-full pointer-events-none"
@@ -99,6 +118,11 @@ function MiniMap({ lat, lng }: { lat: number; lng: number }) {
             "radial-gradient(circle at center, transparent 50%, rgba(11,17,32,0.45) 100%)",
         }}
       />
+      {/* Attribution OSM — exigido pela política de uso dos tiles.
+          Discreto, fora do botão "Como chegar". */}
+      <div className="absolute bottom-1 left-1.5 text-[8px] text-foreground/55 pointer-events-none select-none">
+        © OpenStreetMap
+      </div>
     </div>
   );
 }
