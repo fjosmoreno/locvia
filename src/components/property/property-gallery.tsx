@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import useEmblaCarousel from "embla-carousel-react";
-import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Expand, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GalleryImage {
@@ -37,7 +37,7 @@ export function PropertyGallery({
   const [selected, setSelected] = useState(0);
   const [fsSelected, setFsSelected] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
-  const stageRef = useRef<HTMLDivElement>(null);
+  const fsStageRef = useRef<HTMLDivElement>(null);
 
   const scrollTo = useCallback(
     (i: number) => emblaApi?.scrollTo(i),
@@ -111,6 +111,57 @@ export function PropertyGallery({
       document.body.style.overflow = "";
     };
   }, [fullscreen, fsPrev, fsNext]);
+
+  // Swipe-down pra fechar no mobile (touch gesture)
+  useEffect(() => {
+    if (!fullscreen) return;
+    const el = fsStageRef.current;
+    if (!el) return;
+
+    let startY = 0;
+    let startX = 0;
+    let isVerticalSwipe = false;
+    let tracking = false;
+
+    function onTouchStart(e: TouchEvent) {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      startY = t.clientY;
+      startX = t.clientX;
+      isVerticalSwipe = false;
+      tracking = true;
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (!tracking || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const dy = t.clientY - startY;
+      const dx = t.clientX - startX;
+      // Considera vertical se o movimento é predominantemente pra baixo
+      if (!isVerticalSwipe && Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx) * 1.5) {
+        isVerticalSwipe = true;
+      }
+    }
+    function onTouchEnd(e: TouchEvent) {
+      if (!tracking) return;
+      tracking = false;
+      if (!isVerticalSwipe) return;
+      const t = e.changedTouches[0];
+      const dy = t.clientY - startY;
+      // Swipe pra baixo > 100px fecha
+      if (dy > 100) {
+        setFullscreen(false);
+      }
+    }
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [fullscreen]);
 
   if (!images.length) {
     return (
@@ -225,29 +276,44 @@ export function PropertyGallery({
       {fullscreen && (
         <div
           className="gallery-fs"
-          ref={stageRef}
-          onClick={(e) => {
-            if (e.target === stageRef.current) setFullscreen(false);
-          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Galeria em tela cheia"
         >
-          {/* Top bar: contador + fechar */}
+          {/* Top bar: contador + fechar (safe-area já no padding via CSS) */}
           <div className="gallery-fs-topbar">
-            <div className="gallery-counter">
-              <span>{fsSelected + 1}</span>
-              <span className="opacity-50">/</span>
-              <span>{images.length}</span>
+            <div className="flex items-center gap-2">
+              <div className="gallery-counter">
+                <span>{fsSelected + 1}</span>
+                <span className="opacity-50">/</span>
+                <span>{images.length}</span>
+              </div>
+              {/* Hint mobile — some sozinho após 1 pulse animation */}
+              <span className="gallery-fs-hint">
+                <ChevronDown className="w-3 h-3" strokeWidth={2.4} />
+                Deslize pra baixo pra fechar
+              </span>
             </div>
             <button
               className="gallery-ctrl"
               onClick={() => setFullscreen(false)}
               aria-label="Fechar tela cheia"
             >
-              <X className="w-4 h-4" strokeWidth={2.4} />
+              <X className="w-5 h-5" strokeWidth={2.4} />
             </button>
           </div>
 
-          {/* Stage */}
-          <div className="gallery-fs-stage">
+          {/* Stage — ref aqui: tap na área vazia do stage (preto) fecha */}
+          <div
+            className="gallery-fs-stage"
+            ref={fsStageRef}
+            onClick={(e) => {
+              // Fecha se o clique for na área do stage que NÃO está em um botão ou na imagem
+              if (e.target === fsStageRef.current) {
+                setFullscreen(false);
+              }
+            }}
+          >
             {images.length > 1 && (
               <>
                 <button
@@ -269,7 +335,11 @@ export function PropertyGallery({
               </>
             )}
 
-            <div className="overflow-hidden w-full max-w-5xl" ref={fsRef}>
+            <div
+              className="overflow-hidden w-full max-w-5xl"
+              ref={fsRef}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex">
                 {images.map((im, i) => (
                   <div key={im.id} className="flex-[0_0_100%] min-w-0">
@@ -278,6 +348,7 @@ export function PropertyGallery({
                       alt={`${alt} — foto ${i + 1}`}
                       className="gallery-fs-img w-full max-h-[78vh] object-contain"
                       loading="eager"
+                      draggable={false}
                       onLoad={(e) =>
                         (e.currentTarget as HTMLImageElement).classList.add(
                           "is-loaded"

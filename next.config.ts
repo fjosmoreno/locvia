@@ -56,6 +56,30 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: csp },
         ],
       },
+      // Service Worker: NUNCA cachear (precisa sempre ser fresh pra updates)
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Pragma", value: "no-cache" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      // Manifest: cache curto (24h) — pode ser cacheado mas atualiza rápido
+      {
+        source: "/manifest.json",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, must-revalidate" },
+          { key: "Content-Type", value: "application/manifest+json" },
+        ],
+      },
+      // Ícones PWA: cache longo (immutable) — eles não mudam
+      {
+        source: "/icons/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
     ];
   },
 };

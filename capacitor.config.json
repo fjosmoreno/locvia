@@ -1,0 +1,42 @@
+{
+  "appId": "app.locvia.app",
+  "appName": "LOCVIA",
+  "webDir": "out",
+  "server": {
+    "url": "https://locvia.vercel.app",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#0b1120"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#0b1120",
+    "appleTeamId": "",
+    "buildOptions": {
+      "developmentTeam": "",
+      "codeSignStyle": "automatic"
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#0b1120",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0b1120",
+      "overlaysWebView": false
+    }
+  }
+}
