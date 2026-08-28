@@ -53,6 +53,8 @@ import {
   formatDate,
   type AgencyAdmin,
 } from "@/components/admin/shared";
+import { AgencyFormDialog } from "@/components/admin/agency-form-dialog";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = "ALL" | "PENDING" | "APPROVED" | "BLOCKED";
@@ -68,6 +70,7 @@ export function AgenciesTab() {
   const qc = useQueryClient();
   const [filter, setFilter] = React.useState<StatusFilter>("ALL");
   const [blockTarget, setBlockTarget] = React.useState<AgencyAdmin | null>(null);
+  const [createOpen, setCreateOpen] = React.useState(false);
 
   const { data, isLoading, isError, refetch } = useQuery<{ agencies: AgencyAdmin[] }>({
     queryKey: ["admin", "agencies", filter],
@@ -143,7 +146,7 @@ export function AgenciesTab() {
   return (
     <div className="flex flex-col">
       {/* Filtros */}
-      <div className="p-3 border-b border-border/60 bg-muted/20">
+      <div className="p-3 border-b border-border/60 bg-muted/20 flex items-center gap-2">
         <Select
           value={filter}
           onValueChange={(v) => setFilter(v as StatusFilter)}
@@ -159,6 +162,15 @@ export function AgenciesTab() {
             ))}
           </SelectContent>
         </Select>
+        <span className="flex-1" />
+        <Button
+          size="sm"
+          onClick={() => setCreateOpen(true)}
+          className="gap-1.5 shadow-sm shadow-primary/20"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Nova imobiliária
+        </Button>
       </div>
 
       {/* Conteúdo */}
@@ -213,6 +225,12 @@ export function AgenciesTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AgencyFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => qc.invalidateQueries({ queryKey: ["admin", "agencies"] })}
+      />
     </div>
   );
 }

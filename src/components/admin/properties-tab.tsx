@@ -65,8 +65,10 @@ import {
   formatDate,
   type PropertyAdmin,
 } from "@/components/admin/shared";
+import { PropertyFormDialog } from "@/components/admin/property-form-dialog";
 import { formatPrice } from "@/lib/geo";
 import { PROPERTY_TYPE_LABELS } from "@/lib/constants";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type StatusFilter =
@@ -106,6 +108,7 @@ export function PropertiesTab() {
   const [rejectTarget, setRejectTarget] = React.useState<PropertyAdmin | null>(null);
   const [rejectReason, setRejectReason] = React.useState("");
   const [deleteTarget, setDeleteTarget] = React.useState<PropertyAdmin | null>(null);
+  const [createOpen, setCreateOpen] = React.useState(false);
 
   // notas de rejeição (cliente-side)
   const [rejectNotes, setRejectNotes] = React.useState<Record<string, string>>({});
@@ -231,7 +234,7 @@ export function PropertiesTab() {
   return (
     <div className="flex flex-col">
       {/* Filtros */}
-      <div className="p-3 border-b border-border/60 bg-muted/20">
+      <div className="p-3 border-b border-border/60 bg-muted/20 flex items-center gap-2">
         <Select
           value={filter}
           onValueChange={(v) => setFilter(v as StatusFilter)}
@@ -247,6 +250,15 @@ export function PropertiesTab() {
             ))}
           </SelectContent>
         </Select>
+        <span className="flex-1" />
+        <Button
+          size="sm"
+          onClick={() => setCreateOpen(true)}
+          className="gap-1.5 shadow-sm shadow-primary/20"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Novo imóvel
+        </Button>
       </div>
 
       {/* Conteúdo */}
@@ -354,6 +366,15 @@ export function PropertiesTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PropertyFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => {
+          qc.invalidateQueries({ queryKey: ["admin", "properties"] });
+          qc.invalidateQueries({ queryKey: ["admin", "stats"] });
+        }}
+      />
     </div>
   );
 }
