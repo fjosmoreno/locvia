@@ -82,6 +82,8 @@ import {
   Instagram,
   Save,
   CalendarDays,
+  Lock,
+  Sparkles,
 } from "lucide-react";
 import {
   PROPERTY_TYPE_LABELS,
@@ -195,6 +197,18 @@ const TABS = [
 
 type TabValue = (typeof TABS)[number]["value"];
 
+/**
+ * Abas que exigem plano pago ativo.
+ * Usuário sem subscription vê o conteúdo bloqueado (placeholder com CTA)
+ * e só consegue interagir com overview/plans/profile.
+ */
+const LOCKED_TABS: ReadonlySet<TabValue> = new Set([
+  "properties",
+  "form",
+  "leads",
+  "stats",
+]);
+
 // ============================================================
 // Componente raiz
 // ============================================================
@@ -264,6 +278,26 @@ export function AgencyDashboard() {
   const subscription = plansQuery.data?.subscription ?? null;
   const isAgencyPending =
     role === ROLES.AGENCY && agency && agency.status !== "APPROVED";
+
+  // Gate: ADMIN sempre tem acesso total. Demais anunciantes precisam de plano ativo.
+  const isAdmin = role === ROLES.ADMIN;
+  const hasActivePlan = isAdmin || !!subscription?.active;
+
+  /**
+   * Se o usuário tentar abrir uma aba bloqueada, redireciona pra aba de
+   * planos com uma flag pra mostrar um toast explicativo.
+   */
+  function handleTabChange(v: string) {
+    const next = v as TabValue;
+    if (LOCKED_TABS.has(next) && !hasActivePlan) {
+      toast.info("Assine um plano para desbloquear essa funcionalidade.", {
+        description: "Você pode escolher entre Start, Pro, Business ou Enterprise.",
+      });
+      setTab("plans");
+      return;
+    }
+    setTab(next);
+  }
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && closeDrawer()}>
@@ -350,7 +384,7 @@ export function AgencyDashboard() {
           ) : (
             <Tabs
               value={tab}
-              onValueChange={(v) => setTab(v as TabValue)}
+              onValueChange={handleTabChange}
               className="flex-1 flex flex-col overflow-hidden"
             >
               <div className="border-b border-border/60 bg-background/95 backdrop-blur-md sticky top-0 z-10">
@@ -358,14 +392,28 @@ export function AgencyDashboard() {
                   <TabsList className="bg-transparent h-auto p-0 gap-0 flex w-max rounded-none">
                     {TABS.map((t) => {
                       const Icon = t.icon;
+                      const locked = !hasActivePlan && LOCKED_TABS.has(t.value);
                       return (
                         <TabsTrigger
                           key={t.value}
                           value={t.value}
-                          className="flex-none gap-1.5 h-11 px-3.5 text-xs font-medium text-muted-foreground rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none hover:text-foreground hover:bg-muted/40 transition-colors"
+                          className={cn(
+                            "flex-none gap-1.5 h-11 px-3.5 text-xs font-medium rounded-none border-b-2 border-transparent transition-colors",
+                            "data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none",
+                            locked
+                              ? "text-muted-foreground/60 cursor-pointer hover:text-foreground/80"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                          )}
                         >
                           <Icon className="w-3.5 h-3.5" />
                           {t.label}
+                          {locked && (
+                            <Lock
+                              className="w-3 h-3 ml-0.5 text-amber-400/80"
+                              strokeWidth={2.4}
+                              aria-label="Requer plano"
+                            />
+                          )}
                         </TabsTrigger>
                       );
                     })}
@@ -386,47 +434,87 @@ export function AgencyDashboard() {
                   />
                 </TabsContent>
 
-                <TabsContent value="properties" className="p-4 m-0 animate-fade-in">
-                  <PropertiesTabContent
-                    properties={meQuery.data!.properties}
-                    onCreate={handleCreateNew}
-                    onEdit={handleEdit}
-                    editLoading={editLoading}
-                  />
-                </TabsContent>
+                {hasActivePlan ? (
+                  <TabsContent value="properties" className="p-4 m-0 animate-fade-in">
+                    <PropertiesTabContent
+                      properties={meQuery.data!.properties}
+                      onCreate={handleCreateNew}
+                      onEdit={handleEdit}
+                      editLoading={editLoading}
+                    />
+                  </TabsContent>
+                ) : (
+                  <TabsContent value="properties" className="p-4 m-0 animate-fade-in">
+                    <LockedTabContent
+                      title="Meus imóveis"
+                      description="Gerencie e edite os imóveis que você já publicou no mapa."
+                      onSubscribe={() => setTab("plans")}
+                    />
+                  </TabsContent>
+                )}
 
-                <TabsContent value="form" className="p-4 m-0 animate-fade-in">
-                  <div className="mb-3">
-                    <div className="eyebrow text-primary/80">Formulário</div>
-                    <h2 className="text-base font-semibold tracking-tight">
-                      {editProperty ? "Editar imóvel" : "Cadastrar imóvel"}
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {editProperty
-                        ? "Atualize as informações do seu anúncio."
-                        : "Preencha as informações para publicar um novo anúncio."}
-                    </p>
-                  </div>
-                  <PropertyForm
-                    editProperty={editProperty}
-                    onDone={handleFormDone}
-                    defaultContact={{
-                      name: session.user.name,
-                      phone: session.user.phone,
-                    }}
-                  />
-                </TabsContent>
+                {hasActivePlan ? (
+                  <TabsContent value="form" className="p-4 m-0 animate-fade-in">
+                    <div className="mb-3">
+                      <div className="eyebrow text-primary/80">Formulário</div>
+                      <h2 className="text-base font-semibold tracking-tight">
+                        {editProperty ? "Editar imóvel" : "Cadastrar imóvel"}
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {editProperty
+                          ? "Atualize as informações do seu anúncio."
+                          : "Preencha as informações para publicar um novo anúncio."}
+                      </p>
+                    </div>
+                    <PropertyForm
+                      editProperty={editProperty}
+                      onDone={handleFormDone}
+                      defaultContact={{
+                        name: session.user.name,
+                        phone: session.user.phone,
+                      }}
+                    />
+                  </TabsContent>
+                ) : (
+                  <TabsContent value="form" className="p-4 m-0 animate-fade-in">
+                    <LockedTabContent
+                      title="Cadastrar imóvel"
+                      description="Publique um novo imóvel no mapa com fotos, vídeo e descrição completa."
+                      onSubscribe={() => setTab("plans")}
+                    />
+                  </TabsContent>
+                )}
 
-                <TabsContent value="leads" className="p-4 m-0 animate-fade-in">
-                  <LeadsTab />
-                </TabsContent>
+                {hasActivePlan ? (
+                  <TabsContent value="leads" className="p-4 m-0 animate-fade-in">
+                    <LeadsTab />
+                  </TabsContent>
+                ) : (
+                  <TabsContent value="leads" className="p-4 m-0 animate-fade-in">
+                    <LockedTabContent
+                      title="Leads"
+                      description="Veja os contatos e interesses recebidos dos seus imóveis anunciados."
+                      onSubscribe={() => setTab("plans")}
+                    />
+                  </TabsContent>
+                )}
 
-                <TabsContent value="stats" className="p-4 m-0 animate-fade-in">
-                  <StatsTab
-                    properties={meQuery.data!.properties}
-                    stats={meQuery.data!.stats}
-                  />
-                </TabsContent>
+                {hasActivePlan ? (
+                  <TabsContent value="stats" className="p-4 m-0 animate-fade-in">
+                    <StatsTab
+                      properties={meQuery.data!.properties}
+                      stats={meQuery.data!.stats}
+                    />
+                  </TabsContent>
+                ) : (
+                  <TabsContent value="stats" className="p-4 m-0 animate-fade-in">
+                    <LockedTabContent
+                      title="Estatísticas"
+                      description="Acompanhe visualizações, favoritos e o desempenho dos seus anúncios."
+                      onSubscribe={() => setTab("plans")}
+                    />
+                  </TabsContent>
+                )}
 
                 <TabsContent value="plans" className="p-4 m-0 animate-fade-in">
                   <PlansTabContent
@@ -456,6 +544,61 @@ export function AgencyDashboard() {
 // ============================================================
 // Guardas de acesso
 // ============================================================
+
+/**
+ * Placeholder mostrado em abas que exigem plano pago (meus imóveis, cadastrar,
+ * leads, estatísticas) quando o anunciante não tem subscription ativa.
+ *
+ * Visualmente discreto mas claro: ícone de cadeado, label da feature bloqueada,
+ * descrição e CTA grande "Assinar plano agora" que muda pra aba de planos.
+ */
+function LockedTabContent({
+  title,
+  description,
+  onSubscribe,
+}: {
+  title: string;
+  description: string;
+  onSubscribe: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-12 px-4 animate-fade-in">
+      <div className="relative mb-5">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-amber-500/15 blur-2xl rounded-full"
+        />
+        <div className="relative w-16 h-16 rounded-2xl bg-card border border-amber-500/30 grid place-items-center text-amber-300 shadow-sm shadow-amber-500/10">
+          <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground grid place-items-center ring-2 ring-background">
+            <Lock className="w-3 h-3" strokeWidth={2.6} />
+          </div>
+          <Sparkles className="w-6 h-6" strokeWidth={1.8} />
+        </div>
+      </div>
+
+      <div className="eyebrow text-amber-300/80 mb-1.5">Conteúdo bloqueado</div>
+      <h2 className="text-lg font-semibold tracking-tight text-foreground">
+        {title}
+      </h2>
+      <p className="text-xs text-muted-foreground mt-2 max-w-sm leading-relaxed">
+        {description}
+      </p>
+      <p className="text-xs text-muted-foreground mt-3 max-w-sm leading-relaxed">
+        Assine um dos planos pagos para liberar essa e outras funcionalidades
+        do painel.
+      </p>
+
+      <Button
+        onClick={onSubscribe}
+        size="sm"
+        className="mt-5 shadow-sm shadow-primary/20"
+      >
+        <Crown className="w-3.5 h-3.5 mr-1.5" />
+        Assinar plano agora
+      </Button>
+    </div>
+  );
+}
 
 function NotLoggedIn({ onLogin }: { onLogin: () => void }) {
   return (
