@@ -673,7 +673,11 @@ html, body { overflow-x: hidden; }
   height: 44px;
   padding: 0 18px;
   border-radius: 999px;
-  background: rgba(19, 28, 49, 0.78);
+  /* opacidade subiu de 0.78 → 0.92: o banner de "Localização indisponível"
+     fica no mesmo top dos chips, e o backdrop-filter blur(14px) criava um
+     "borrão" (conteúdo do banner vazando através do chip semi-transparente).
+     0.92 mantém o glassmorphism mas elimina o vazamento visual. */
+  background: rgba(19, 28, 49, 0.92);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.07);

@@ -102,7 +102,11 @@ export default function RootLayout({
         <Providers>
           {children}
           <Toaster />
-          <SonnerToaster position="top-center" richColors toastOptions={{ style: { borderRadius: "12px" } }} />
+          {/* position "bottom-center" pra não cobrir a fileira de chips (z-1050)
+              que fica no topo — o toast anterior em "top-center" criava um
+              "borrão" sobre os botões Quartos/Tipo/Preço quando o location
+              error disparava. */}
+          <SonnerToaster position="bottom-center" richColors toastOptions={{ style: { borderRadius: "12px" } }} />
         </Providers>
         <ServiceWorkerRegister />
       </body>
