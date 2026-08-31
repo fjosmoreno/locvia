@@ -39,12 +39,12 @@ export function Topbar() {
       <header className="absolute top-0 inset-x-0 z-[1100] pointer-events-none">
         <div className="px-3 sm:px-4 pt-3">
           <div className="pointer-events-auto flex items-center gap-2 sm:gap-3">
-            {/* Logo — squircle 36px no mobile, full no desktop */}
+            {/* Logo — botão "Início" AAA, 44x44 no mobile */}
             <div className="hidden sm:block shrink-0">
-              <BrandLogo />
+              <BrandLogo mode="home" />
             </div>
             <div className="sm:hidden shrink-0">
-              <BrandLogo compact />
+              <BrandLogo compact mode="home" />
             </div>
 
             {/* Busca — glass dark full-width */}
