@@ -7,6 +7,7 @@ import {
 import { useUI } from "@/lib/store";
 import { useUserLocation } from "@/hooks/use-geolocation";
 import { PropertyCard } from "@/components/property/property-card";
+import { CloseButton } from "@/components/ui/close-button";
 import { cn } from "@/lib/utils";
 
 interface GeoResult {
@@ -225,13 +226,7 @@ export function RoutePanel() {
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
-            <button
-              onClick={closeRoute}
-              className="overlay-panel-close"
-              aria-label="Fechar"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <CloseButton variant="tap" onClose={closeRoute} aria-label="Fechar painel de rota" />
           </div>
         </div>
 

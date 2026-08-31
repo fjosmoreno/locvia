@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CloseMenuItem } from "@/components/ui/close-menu-item";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useUI } from "@/lib/store";
@@ -106,6 +107,8 @@ export function Topbar() {
                   >
                     <LogOut className="w-4 h-4 mr-2" /> Sair
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <CloseMenuItem />
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (

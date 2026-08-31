@@ -44,8 +44,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CloseMenuItem } from "@/components/ui/close-menu-item";
 import { useUI } from "@/lib/store";
 import { PropertyForm } from "./property-form";
+import { CloseButton } from "@/components/ui/close-button";
 import { toast } from "sonner";
 import {
   LayoutDashboard,
@@ -66,7 +68,6 @@ import {
   Trash2,
   Loader2,
   AlertTriangle,
-  X,
   ShieldAlert,
   MapPin,
   Heart,
@@ -338,15 +339,7 @@ export function AgencyDashboard() {
               </SheetDescription>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 relative rounded-lg hover:bg-muted"
-            onClick={closeDrawer}
-            aria-label="Fechar"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          <CloseButton variant="labeled" onClose={closeDrawer} className="shrink-0" />
         </SheetHeader>
 
         {/* Body */}
@@ -1117,8 +1110,8 @@ function PropertyRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 rounded-lg hover:bg-muted"
-            aria-label="Ações"
+            className="h-11 w-11 shrink-0 rounded-lg hover:bg-muted"
+            aria-label={`Mais ações para ${property.title}`}
           >
             <MoreVertical className="w-4 h-4" />
           </Button>
@@ -1165,6 +1158,8 @@ function PropertyRow({
             onConfirm={() => deleteMutation.mutate()}
             loading={deleteMutation.isPending}
           />
+          <DropdownMenuSeparator />
+          <CloseMenuItem />
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

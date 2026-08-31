@@ -64,18 +64,18 @@ export function LocationPermissionPrompt() {
         {status !== "unavailable" && (
           <button
             onClick={handleRetry}
-            className="shrink-0 rounded-full h-7 px-3 text-[11px] font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center gap-1"
+            className="shrink-0 rounded-full min-h-[36px] h-9 px-3.5 text-[11px] font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <RefreshCw className="w-2.5 h-2.5" />
+            <RefreshCw className="w-3 h-3" />
             Tentar
           </button>
         )}
         <button
           onClick={dismiss}
-          className="shrink-0 text-muted-foreground hover:text-foreground p-1 rounded-full transition-colors hover:bg-white/5"
-          aria-label="Dispensar"
+          className="shrink-0 w-9 h-9 grid place-items-center text-muted-foreground hover:text-foreground rounded-full transition-colors hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Dispensar aviso de localização"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
     </div>

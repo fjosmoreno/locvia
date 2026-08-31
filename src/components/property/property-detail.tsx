@@ -319,7 +319,7 @@ export function PropertyDetail({ propertyId }: { propertyId: string }) {
       >
         <button
           onClick={closeProperty}
-          className="w-9 h-9 grid place-items-center rounded-full hover:bg-accent transition-colors shrink-0 group"
+          className="w-11 h-11 grid place-items-center rounded-full hover:bg-accent transition-colors shrink-0 group"
           aria-label="Voltar ao mapa"
         >
           <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
@@ -335,7 +335,7 @@ export function PropertyDetail({ propertyId }: { propertyId: string }) {
         <button
           onClick={handleFav}
           className={cn(
-            "w-9 h-9 grid place-items-center rounded-full hover:bg-accent transition-colors shrink-0",
+            "w-11 h-11 grid place-items-center rounded-full hover:bg-accent transition-colors shrink-0",
             bounce && "animate-fav-bounce"
           )}
           aria-label={isFavorited ? "Remover dos favoritos" : "Favoritar"}

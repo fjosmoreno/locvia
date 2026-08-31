@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Sparkles, Send, X, Loader2, Trash2, MapPin, MessageCircle, ChevronUp } from "lucide-react";
 import { useUI } from "@/lib/store";
+import { CloseButton } from "@/components/ui/close-button";
 import { cn } from "@/lib/utils";
 
 const SUGGESTIONS = [
@@ -276,13 +277,7 @@ export function AiPanel() {
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
-              <button
-                onClick={closeAi}
-                className="overlay-panel-close"
-                aria-label="Fechar"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <CloseButton variant="tap" onClose={closeAi} aria-label="Fechar painel de IA" />
             </div>
           </div>
 

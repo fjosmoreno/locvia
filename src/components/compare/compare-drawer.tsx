@@ -2,10 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  X, GitCompare, Check, Minus, BedDouble, Bath, Car, Maximize, MapPin, BadgeCheck,
+  X, GitCompare, BedDouble, Bath, Car, Maximize, MapPin, BadgeCheck,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { CloseButton } from "@/components/ui/close-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUI } from "@/lib/store";
 import { formatPrice } from "@/lib/geo";
@@ -30,23 +31,21 @@ export function CompareDrawer() {
   return (
     <Sheet open={open} onOpenChange={(o) => !o && closeDrawer()}>
       <SheetContent side="right" className="w-full sm:max-w-4xl p-0 flex flex-col">
-        <SheetHeader className="px-4 py-4 border-b border-border flex-row items-center justify-between space-y-0">
-          <SheetTitle className="flex items-center gap-2">
-            <GitCompare className="w-4 h-4 text-primary" />
-            Comparar imóveis
-            <span className="text-xs text-muted-foreground font-normal">
+        <SheetHeader className="px-4 py-3 border-b border-border flex-row items-center justify-between space-y-0 gap-2">
+          <SheetTitle className="flex items-center gap-2 min-w-0">
+            <GitCompare className="w-4 h-4 text-primary shrink-0" />
+            <span className="truncate">Comparar imóveis</span>
+            <span className="text-xs text-muted-foreground font-normal shrink-0">
               {compareIds.length}/3
             </span>
           </SheetTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {compareIds.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearCompare} className="text-xs">
+              <Button variant="ghost" size="sm" onClick={clearCompare} className="text-xs h-9 px-3">
                 Limpar
               </Button>
             )}
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeDrawer}>
-              <X className="w-4 h-4" />
-            </Button>
+            <CloseButton variant="labeled" onClose={closeDrawer} />
           </div>
         </SheetHeader>
 
@@ -104,10 +103,10 @@ function CompareColumn({ property: p, onRemove, onView }: { property: Property; 
         )}
         <button
           onClick={onRemove}
-          className="absolute top-2 right-2 w-7 h-7 grid place-items-center rounded-full bg-black/60 backdrop-blur text-white hover:bg-black/80"
+          className="absolute top-2 right-2 w-11 h-11 grid place-items-center rounded-full bg-black/60 backdrop-blur text-white hover:bg-black/80 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 active:scale-90 motion-safe:transition-transform"
           aria-label="Remover do comparador"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" strokeWidth={2.4} />
         </button>
       </div>
       <div className="p-3 space-y-2">

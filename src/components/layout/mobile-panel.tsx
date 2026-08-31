@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, type ReactNode, useEffect } from "react";
-import { ChevronUp, ChevronDown, MapPin } from "lucide-react";
+import { ChevronUp, ChevronDown, MapPin, X } from "lucide-react";
 import { useUI } from "@/lib/store";
+import { CloseButton } from "@/components/ui/close-button";
 import { cn } from "@/lib/utils";
 
 type Snap = "peek" | "half" | "full";
@@ -17,7 +18,7 @@ const SNAP_ORDER: Snap[] = ["peek", "half", "full"];
 
 /** Painel inferior (mobile) — drag com snap peek/half/full + spring AAA. */
 export function MobilePanel({ children }: { children: ReactNode }) {
-  const { panelView, selectedPropertyId, properties, loadingProperties, ai, route } = useUI();
+  const { panelView, selectedPropertyId, properties, loadingProperties, ai, route, closeProperty } = useUI();
   const [snap, setSnap] = useState<Snap>("half");
   const dragging = useRef(false);
   const startY = useRef(0);
@@ -73,11 +74,26 @@ export function MobilePanel({ children }: { children: ReactNode }) {
     setSnap(next);
   }
 
+  /**
+   * "Fechar painel" — para o estado de resultados, volta pro peek
+   * (mantém visível no rodapé sem cobrir o mapa). Para o detalhe,
+   * fecha o imóvel (volta pro results).
+   */
+  function handleClose() {
+    if (isDetail) {
+      closeProperty();
+      return;
+    }
+    setSnap("peek");
+  }
+
   const title = isDetail
     ? "Detalhes do imóvel"
     : loadingProperties && count === 0
     ? "Buscando imóveis…"
     : `${count} ${count === 1 ? "imóvel" : "imóveis"}`;
+
+  const closeLabel = isDetail ? "Voltar ao mapa" : "Fechar painel";
 
   return (
     <div
@@ -102,11 +118,11 @@ export function MobilePanel({ children }: { children: ReactNode }) {
         <div className="flex justify-center mb-2">
           <div className="sheet-handle" />
         </div>
-        <div className="flex items-center justify-between px-4 gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center justify-between px-3 sm:px-4 gap-2 min-h-[44px]">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {/* Snap dots indicator */}
             {!isDetail && (
-              <div className="snap-dots shrink-0">
+              <div className="snap-dots shrink-0" aria-hidden>
                 {SNAP_ORDER.map((s) => (
                   <span
                     key={s}
@@ -136,26 +152,36 @@ export function MobilePanel({ children }: { children: ReactNode }) {
               </div>
             )}
           </div>
-          {!isDetail && (
-            <button
-              onClick={cycleSnap}
-              className="sheet-expand-btn"
-              aria-label={effectiveSnap === "full" ? "Recolher" : "Expandir"}
-              title={
-                effectiveSnap === "peek"
-                  ? "Expandir para metade"
-                  : effectiveSnap === "half"
-                  ? "Expandir para tela cheia"
-                  : "Recolher"
-              }
-            >
-              {effectiveSnap === "full" ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronUp className="w-4 h-4" />
-              )}
-            </button>
-          )}
+
+          {/* Lado direito: ações sempre visíveis (44px+ cada) */}
+          <div className="flex items-center gap-1 shrink-0">
+            {!isDetail && (
+              <button
+                onClick={cycleSnap}
+                className="sheet-expand-btn"
+                aria-label={effectiveSnap === "full" ? "Recolher painel" : "Expandir painel"}
+                title={
+                  effectiveSnap === "peek"
+                    ? "Expandir para metade"
+                    : effectiveSnap === "half"
+                    ? "Expandir para tela cheia"
+                    : "Recolher"
+                }
+              >
+                {effectiveSnap === "full" ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
+              </button>
+            )}
+            <CloseButton
+              variant="tap"
+              onClose={handleClose}
+              aria-label={closeLabel}
+              title={closeLabel}
+            />
+          </div>
         </div>
       </div>
 

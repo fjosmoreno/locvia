@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import {
   ShieldCheck,
   Loader2,
-  X,
   LayoutDashboard,
   Building2,
   Home,
@@ -22,6 +21,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { CloseButton } from "@/components/ui/close-button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUI } from "@/lib/store";
@@ -68,15 +68,7 @@ export function AdminDashboard() {
               </SheetDescription>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 relative rounded-lg hover:bg-muted"
-            onClick={closeDrawer}
-            aria-label="Fechar painel"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          <CloseButton variant="labeled" onClose={closeDrawer} className="shrink-0" />
         </SheetHeader>
 
         {/* Body */}

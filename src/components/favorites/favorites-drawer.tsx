@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Heart, MapPinOff, X } from "lucide-react";
+import { Heart, MapPinOff } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { CloseButton } from "@/components/ui/close-button";
 import { PropertyCard, PropertyCardSkeleton } from "@/components/property/property-card";
 import { useUI } from "@/lib/store";
 import { useSession } from "next-auth/react";
@@ -28,13 +28,12 @@ export function FavoritesDrawer() {
   return (
     <Sheet open={open} onOpenChange={(o) => !o && closeDrawer()}>
       <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
-        <SheetHeader className="px-4 py-4 border-b border-border flex-row items-center justify-between space-y-0">
-          <SheetTitle className="flex items-center gap-2">
-            <Heart className="w-4 h-4 text-rose-500" /> Meus favoritos
+        <SheetHeader className="px-4 py-3 border-b border-border flex-row items-center justify-between space-y-0 gap-2">
+          <SheetTitle className="flex items-center gap-2 min-w-0">
+            <Heart className="w-4 h-4 text-rose-500 shrink-0" />
+            <span className="truncate">Meus favoritos</span>
           </SheetTitle>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeDrawer}>
-            <X className="w-4 h-4" />
-          </Button>
+          <CloseButton variant="labeled" onClose={closeDrawer} className="shrink-0" />
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto scroll-area p-3 space-y-3">

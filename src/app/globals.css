@@ -669,8 +669,9 @@ html, body { overflow-x: hidden; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 38px;
-  padding: 0 16px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 18px;
   border-radius: 999px;
   background: rgba(19, 28, 49, 0.78);
   backdrop-filter: saturate(180%) blur(14px);
@@ -1547,10 +1548,10 @@ html, body { overflow-x: hidden; }
   width: 44px;
 }
 
-/* Botão de expandir/recolher — touch target 44px */
+/* Botão de expandir/recolher — touch target 44px (AAA WCAG 2.5.5) */
 .sheet-expand-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border-radius: 12px;
@@ -1560,12 +1561,17 @@ html, body { overflow-x: hidden; }
   transition: all 0.18s var(--ease-out);
   cursor: pointer;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .sheet-expand-btn:hover,
 .sheet-expand-btn:active {
   background: var(--accent);
   color: var(--primary);
   border-color: var(--primary);
+}
+.sheet-expand-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
 }
 
 /* Indicador de snap (3 pontos) */
@@ -1593,12 +1599,49 @@ html, body { overflow-x: hidden; }
 .scroll-x::-webkit-scrollbar { display: none; }
 
 /* ============================================================
-   FOCUS VISIBILITY — acessibilidade
+   FOCUS VISIBILITY — AAA (WCAG 2.4.7, 2.4.11)
+   Ring 3px ciano com offset visível, sempre que possível.
    ============================================================ */
+:focus {
+  outline: none;
+}
 :focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
+}
+/* Em dark mode, o anel precisa de mais contraste — usa o ring token direto */
+:where(button, a, [role="button"], [role="menuitem"], [role="tab"], input, select, textarea):focus-visible {
+  outline-color: var(--ring);
+  outline-width: 3px;
+  outline-offset: 2px;
+}
+/* Quando o elemento já tem ring interno, evita outline duplo */
+:where(.profile-trigger, .map-overlay-btn, .sheet-expand-btn, .overlay-panel-close):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 5px var(--ring);
+}
+
+/* ============================================================
+   REDUCED MOTION — respeita preferência do usuário (AAA WCAG 2.3.3)
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   CLOSE BUTTON — componente dedicado (44px + label opcional)
+   Estilos ficam aqui porque a lib shadcn não cobre o pattern AAA.
+   ============================================================ */
+[data-slot="close-button"] {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ============================================================
@@ -1688,8 +1731,8 @@ html, body { overflow-x: hidden; }
   flex-shrink: 0;
 }
 .overlay-panel-close {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border-radius: 10px;
@@ -1697,10 +1740,15 @@ html, body { overflow-x: hidden; }
   transition: all 0.16s var(--ease-out);
   cursor: pointer;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .overlay-panel-close:hover {
   background: var(--secondary);
   color: var(--foreground);
+}
+.overlay-panel-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
 }
 
 /* Sugestões IA — pills premium clicáveis (touch target ≥ 44px) */

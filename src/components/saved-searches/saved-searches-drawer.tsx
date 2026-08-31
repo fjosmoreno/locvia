@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { Bell, X, Trash2, Plus, MapPinOff } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { CloseButton } from "@/components/ui/close-button";
 import { Badge } from "@/components/ui/badge";
 import { useUI } from "@/lib/store";
 import { toast } from "sonner";
@@ -59,13 +60,12 @@ export function SavedSearchesDrawer() {
   return (
     <Sheet open={open} onOpenChange={(o) => !o && closeDrawer()}>
       <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
-        <SheetHeader className="px-4 py-4 border-b border-border flex-row items-center justify-between space-y-0">
-          <SheetTitle className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-primary" /> Alertas de imóveis
+        <SheetHeader className="px-4 py-3 border-b border-border flex-row items-center justify-between space-y-0 gap-2">
+          <SheetTitle className="flex items-center gap-2 min-w-0">
+            <Bell className="w-4 h-4 text-primary shrink-0" />
+            <span className="truncate">Alertas de imóveis</span>
           </SheetTitle>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeDrawer}>
-            <X className="w-4 h-4" />
-          </Button>
+          <CloseButton variant="labeled" onClose={closeDrawer} className="shrink-0" />
         </SheetHeader>
 
         {/* Salvar busca atual */}
@@ -117,10 +117,10 @@ export function SavedSearchesDrawer() {
                   </div>
                   <button
                     onClick={() => deleteMutation.mutate(s.id)}
-                    className="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="shrink-0 w-11 h-11 grid place-items-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-destructive/60"
                     aria-label="Remover alerta"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">

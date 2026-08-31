@@ -99,12 +99,12 @@ export function ResultsPanel() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2.5 text-muted-foreground hover:text-foreground shrink-0"
+            className="h-11 min-w-[44px] px-3 text-muted-foreground hover:text-foreground shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={() => openDrawer("filters")}
             aria-label="Abrir filtros avançados"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span className="text-[12px] font-medium hidden sm:inline">Filtros</span>
+            <SlidersHorizontal className="w-4 h-4" />
+            <span className="text-[12px] font-semibold hidden sm:inline">Filtros</span>
           </Button>
         </div>
 
