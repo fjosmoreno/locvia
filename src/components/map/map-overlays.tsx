@@ -58,7 +58,10 @@ export function MapControls() {
   if (drawer) return null;
 
   return (
-    <div className="absolute right-3 bottom-8 z-[1000] flex flex-col gap-2 pointer-events-auto md:bottom-8">
+    <div
+      className="absolute right-3 bottom-[160px] md:bottom-8 z-[1000] flex flex-col gap-2 pointer-events-auto"
+      data-testid="map-controls"
+    >
       <button
         onClick={() => map?.zoomIn({ duration: 300 })}
         className="map-overlay-btn"
@@ -129,7 +132,7 @@ export function SearchInAreaPrompt() {
   }
 
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 bottom-8 z-[1000] pointer-events-none md:bottom-8">
+    <div className="absolute left-1/2 -translate-x-1/2 bottom-[160px] md:bottom-8 z-[1000] pointer-events-none">
       <button
         onClick={refetch}
         className="search-area-btn pointer-events-auto animate-scale-in"
